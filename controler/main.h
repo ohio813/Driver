@@ -1,13 +1,14 @@
 #include <cstdlib>
 #include <cstdio>
 #include <windows.h>
+#include <winioctl.h>
 
 #define HOOK_INDEX 				0x860 
 #define HOOK_ON					CTL_CODE(FILE_DEVICE_UNKNOWN,HOOK_INDEX + 0,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define HOOK_OFF				CTL_CODE(FILE_DEVICE_UNKNOWN,HOOK_INDEX + 1,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define GET_ADD					CTL_CODE(FILE_DEVICE_UNKNOWN,HOOK_INDEX + 2,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define CODE_ALLOW				0xff
-#define CODE_DENY
+#define CODE_DENY				0
 
 //Share Memory
 typedef struct _SHARE
