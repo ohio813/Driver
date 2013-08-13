@@ -70,13 +70,22 @@ ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress)
 
 NTSTATUS
 NTAPI
-HookNtOpenProcess (
-	OUT PHANDLE ProcessHandle,
-	IN ACCESS_MASK AccessMask,
-	IN POBJECT_ATTRIBUTES ObjectAttributes,
-	IN PCLIENT_ID ClientId)
+HookZwWriteFile(
+	IN HANDLE FileHandle,
+	IN HANDLE Event OPTIONAL,
+	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
+	IN PVOID ApcContext OPTIONAL,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PVOID Buffer,
+	IN ULONG Length,
+	IN PLARGE_INTEGER ByteOffset OPTIONAL,
+	IN PULONG Key OPTIONAL
+)
 {
-	DbgPrint("Hit NtOpenProcess\n");
+	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
+	DbgPrint("Hit ZwWriteFile");
+	//if (PsGetCurrentProcessId() == ClientId->UniqueProcess)
+		//DbgPrint("Hit ZwWriteFile");
 	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
 	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
 
@@ -85,20 +94,28 @@ HookNtOpenProcess (
 	switch (code)
 	{
 	case CODE_ALLOW:
-		ModifyProcAddress(SERVICE_INDEX(NtOpenProcess), OldAddress);
-		ret = NtOpenProcess(
-			ProcessHandle,
-			AccessMask,
-			ObjectAttributes,
-			ClientId);
-		ModifyProcAddress(SERVICE_INDEX(NtOpenProcess), NewAddress);
+		DbgPrint("Allowed\n");
+		ret = ZwWriteFile(
+			FileHandle,
+			Event,
+			ApcRoutine,
+			ApcContext,
+			IoStatusBlock,
+			Buffer,
+			Length,
+			ByteOffset,
+			Key
+			);
 		break;
 	case CODE_DENY:
+		DbgPrint("Denied\n");
 		ret = STATUS_ACCESS_DENIED;
 		break;
 	default:
+		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
+	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), NewAddress);
 	return ret;
 }
 
@@ -135,7 +152,9 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 
 	pShare = (PSHARE)ExAllocatePool(NonPagedPool, sizeof(PSHARE));
 	pMdl = IoAllocateMdl(pShare, sizeof(PSHARE), FALSE, FALSE, NULL);
+	MmBuildMdlForNonPagedPool(pMdl);
 	DbgPrint("Share Memory Address:0x%08X\n", (ULONG)pShare);
+	pShare -> Code = CODE_ALLOW;
 
 	DeviceObject->Flags |= DO_DIRECT_IO;
 	DeviceObject->AlignmentRequirement = FILE_WORD_ALIGNMENT;
@@ -153,7 +172,7 @@ void HookUnload(IN PDRIVER_OBJECT DriverObject)
 	ExFreePool(pShare);
 
 	if (hooking)
-		ModifyProcAddress(SERVICE_INDEX(NtOpenProcess), OldAddress);
+		ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
 
 	UNICODE_STRING Win32Device;
 	RtlInitUnicodeString(&Win32Device,L"\\DosDevices\\Hook");
@@ -217,9 +236,9 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
 				break;
 			}
-			DbgPrint("Hook On of service %d\n", SERVICE_INDEX(NtOpenProcess));
-			NewAddress = (ULONG)HookNtOpenProcess;
-			OldAddress = ModifyProcAddress(SERVICE_INDEX(NtOpenProcess), NewAddress);
+			DbgPrint("Hook On of service %d\n", SERVICE_INDEX(ZwWriteFile));
+			NewAddress = (ULONG)HookZwWriteFile;
+			OldAddress = ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), NewAddress);
 			hooking = true;
 		}
 		break;
@@ -229,7 +248,7 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 		if (hooking)
 		{
 			DbgPrint("Hook Off\n");
-			ModifyProcAddress(SERVICE_INDEX(NtOpenProcess), OldAddress);
+			ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
 			hooking = false;
 		}
 		else
@@ -248,6 +267,7 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 		}
 		PVOID UserAdd = MmMapLockedPages(pMdl, UserMode);
 		*pBuffer = UserAdd;
+		DbgPrint("UserMode Address:0x%08X\n", UserAdd);
 		break;
 	}
 	default:

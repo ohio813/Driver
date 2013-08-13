@@ -3,55 +3,59 @@
 HANDLE hEvent, hCallBack;
 PSHARE pShare;
 bool bExit = false;
+DWORD nothing;
+HANDLE hThread[THREADS];
 
-bool hook(HANDLE hDevice)
+void hook(HANDLE hDevice)
 {
-	DWORD nothing;
-	if (DeviceIoControl(hDevice,
-						GET_ADD,
-						NULL,
-						0,
-						&pShare,
-						sizeof(PSHARE),
-						&nothing,
-						0) == 0);
-	{
-		return false;
-	}
+	DeviceIoControl(hDevice,
+					GET_ADD,
+					NULL,
+					0,
+					&pShare,
+					sizeof(PSHARE),
+					&nothing,
+					0);
 	IO_PACKAGE package;
 	hEvent = package.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	hCallBack = package.hCallBack = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (DeviceIoControl(hDevice,
-						HOOK_ON,
-						&package,
-						sizeof(IO_PACKAGE),
-						NULL,
-						0,
-						&nothing,
-						0) == 0);
-	{
-		CloseHandle(hEvent);
-		CloseHandle(hCallBack);
-		return false;
-	}
-	return true;
+	DeviceIoControl(hDevice,
+					HOOK_ON,
+					&package,
+					sizeof(IO_PACKAGE),
+					NULL,
+					0,
+					&nothing,
+					0);
+}
+
+void unhook(HANDLE hDevice)
+{
+	DeviceIoControl(hDevice,
+					HOOK_OFF,
+					NULL,
+					0,
+					NULL,
+					0,
+					&nothing,
+					0);
 }
 
 DWORD WINAPI work (LPVOID lpParam)
 {
 	while (true)
 	{
-		WaitForSingleObject(hCallBack, INFINITE);
+		WaitForSingleObject(hEvent, INFINITE);
 		if (bExit)
 			return 0;
 		pShare -> Code = CODE_ALLOW;
 		SetEvent(hCallBack);
-		printf("Event hit: NtOpenProcess\n");
+		printf("Event hit: ZwWriteFile\n");
 		printf("Allowed\n");
 	}
 }
 
-int main()
+int main(int argc, char** argv)
 {
 	HANDLE hDevice = CreateFile("\\\\.\\Hook",
 								GENERIC_READ|GENERIC_WRITE,
@@ -60,39 +64,33 @@ int main()
 								OPEN_EXISTING,
 								0,
 								NULL);
-	if (hDevice == INVALID_HANDLE_VALUE || !hook(hDevice))
+	if (hDevice == INVALID_HANDLE_VALUE)
 	{
 		printf("Error\n");
 		return 0;
 	}
-	DWORD dwThread;
-	HANDLE hThread = CreateThread(NULL, 0, work, NULL, 0, &dwThread);
-	while (true)
+	if (argc == 1)
 	{
-		char str[20];
-		scanf("%s", str);
-		if (strcmp(str, "stop"))
+		hook(hDevice);
+		DWORD dwThread;
+		for (int i = 0; i < THREADS; ++i)
+			hThread[i] = CreateThread(NULL, 0, work, NULL, 0, &dwThread);
+		while (true)
 		{
-			bExit = true;
-			DWORD nothing;
-			if (DeviceIoControl(hDevice,
-								HOOK_OFF,
-								NULL,
-								0,
-								NULL,
-								0,
-								&nothing,
-								0) == 0)
-			{
-				printf("Hook off error!\n");
-			} else {
-				bExit = true;
-				SetEvent(hCallBack);
-				CloseHandle(hEvent);
-				CloseHandle(hCallBack);
-				CloseHandle(hThread);
-				return 0;
-			}
+			char c = getchar();
+			if (c == 'q')
+				break;
 		}
+		bExit = true;
+		for (int i = 0; i < THREADS; ++i)
+			SetEvent(hEvent);
+		for (int i = 0; i < THREADS; ++i)
+			CloseHandle(hThread[i]);
+		unhook(hDevice);
+		CloseHandle(hEvent);
+		CloseHandle(hCallBack);
+	} else {
+		unhook(hDevice);
 	}
+	return 0;
 }

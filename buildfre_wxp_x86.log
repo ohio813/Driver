@@ -1,72 +1,11 @@
 BUILD: Computing Include file dependencies:
-BUILD: Examining d:\projects\driver1\trunk directory for files to compile.
+BUILD: Examining d:\projects\driver1 directory for files to compile.
 oacr invalidate root:x86fre /autocleanqueue
-1>Compiling and Linking d:\projects\driver1\trunk *************
+1>Compiling and Linking d:\projects\driver1 *************
 1>'nmake.exe /nologo BUILDMSG=Stop. -i BUILD_PASS=PASS2 LINKONLY=1 NOPASS0=1 MAKEDIR_RELATIVE_TO_BASEDIR='
-1>d:\projects\driver1\trunk: TARGETPATH is obj
+1>d:\projects\driver1: TARGETPATH is obj
 1>BUILDMSG: _NT_TARGET_VERSION SET TO WINXP
-1> D:\WinDDK\7600.16385.1\Bin\x86\oacr\oacrcl @d:\projects\driver1\trunk\objfre_wxp_x86\i386\cl.rsp
-1>Microsoft (R) 32-bit C/C++ Optimizing Compiler Version 15.00.30729.207 for 80x86
-1>Copyright (C) Microsoft Corporation.  All rights reserved.
-1>cl /Fo"d:\projects\driver1\trunk\objfre_wxp_x86\i386/"
-1> /FC
-1> /Ii386
-1> /I.
-1> /Id:\projects\driver1\trunk\objfre_wxp_x86\i386
-1> /ID:\WinDDK\7600.16385.1\inc\api
-1> /ID:\WinDDK\7600.16385.1\inc\api
-1> /ID:\WinDDK\7600.16385.1\inc\ddk
-1> /ID:\WinDDK\7600.16385.1\inc\ddk
-1> /ID:\WinDDK\7600.16385.1\inc\crt
-1> /D_X86_=1
-1> /Di386=1
-1> /DSTD_CALL
-1> /DCONDITION_HANDLING=1
-1> /DNT_UP=1
-1> /DNT_INST=0
-1> /DWIN32=100
-1> /D_NT1X_=100
-1> /DWINNT=1
-1> /D_WIN32_WINNT=0x0501
-1> /DWINVER=0x0501
-1> /D_WIN32_IE=0x0603
-1> /DWIN32_LEAN_AND_MEAN=1
-1> /DDEVL=1
-1> /D__BUILDMACHINE__=WinDDK
-1> /DFPO=0
-1> /DNDEBUG
-1> /D_DLL=1
-1> /DNDEBUG
-1> /DNTDDI_VERSION=0x05010200
-1> /c
-1> /Zc:wchar_t-
-1> /Zl
-1> /Zp8
-1> /Gy
-1> /Gm-
-1> -cbstring
-1> /W3
-1> /WX
-1> /Gz
-1> /hotpatch
-1> /EHs-c-
-1> /GR-
-1> /GF
-1> /GS
-1> /Zi
-1> /Oxs
-1> /Oy-
-1> /Zi
-1> /Fdd:\projects\driver1\trunk\objfre_wxp_x86\i386\
-1> /DKMDF_MAJOR_VERSION_STRING=01
-1> /DKMDF_MINOR_VERSION_STRING=009
-1> /wd4603
-1> /wd4627
-1> /typedil-
-1> /FID:\WinDDK\7600.16385.1\inc\api\warning.h
-1> .\main.cpp 
-1>main.cpp
-1> D:\WinDDK\7600.16385.1\Bin\x86\oacr\oacrlink /out:d:\projects\driver1\trunk\objfre_wxp_x86\i386\driver1.sys /machine:ix86 @d:\projects\driver1\trunk\objfre_wxp_x86\i386\lnk.rsp
+1> D:\WinDDK\7600.16385.1\Bin\x86\oacr\oacrlink /out:d:\projects\driver1\objfre_wxp_x86\i386\driver1.sys /machine:ix86 @d:\projects\driver1\objfre_wxp_x86\i386\lnk.rsp
 1>Microsoft (R) Incremental Linker Version 9.00.30729.207
 1>Copyright (C) Microsoft Corporation.  All rights reserved.
 1>/MERGE:_PAGE=PAGE 
@@ -92,8 +31,8 @@ oacr invalidate root:x86fre /autocleanqueue
 1>/align:0x80 /stub:d:\winddk\7600.16385.1\lib\wxp\stub512.com 
 1>/subsystem:native,5.01 
 1>/entry:GsDriverEntry@8 
-1>/out:d:\projects\driver1\trunk\objfre_wxp_x86\i386\driver1.sys 
-1>d:\projects\driver1\trunk\objfre_wxp_x86\i386\main.obj 
+1>/out:d:\projects\driver1\objfre_wxp_x86\i386\driver1.sys 
+1>d:\projects\driver1\objfre_wxp_x86\i386\main.obj 
 1>d:\winddk\7600.16385.1\lib\wxp\i386\BufferOverflowK.lib 
 1>d:\winddk\7600.16385.1\lib\wxp\i386\ntoskrnl.lib 
 1>d:\winddk\7600.16385.1\lib\wxp\i386\hal.lib 

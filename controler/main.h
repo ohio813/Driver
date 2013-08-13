@@ -9,6 +9,7 @@
 #define GET_ADD					CTL_CODE(FILE_DEVICE_UNKNOWN,HOOK_INDEX + 2,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define CODE_ALLOW				0xff
 #define CODE_DENY				0
+#define THREADS					10
 
 //Share Memory
 typedef struct _SHARE

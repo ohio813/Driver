@@ -10,7 +10,7 @@
 # lowercased
 BASEDIR=d:\winddk\7600.16385.1
 OBJECT_ROOT=d:\winddk\7600.16385.1
-MAKEDIR_LOWERCASE=d:\projects\driver1\trunk
-OBJ_PATH=d:\projects\driver1\trunk
+MAKEDIR_LOWERCASE=d:\projects\driver1
+OBJ_PATH=d:\projects\driver1
 CONCURRENT_MIDL=0
 CONCURRENT_MANIFEST_BUILD=0

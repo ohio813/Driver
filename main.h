@@ -30,11 +30,16 @@ ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress);
 
 NTSTATUS
 NTAPI
-HookNtOpenProcess (
-	OUT PHANDLE ProcessHandle,
-	IN ACCESS_MASK AccessMask,
-	IN POBJECT_ATTRIBUTES ObjectAttributes,
-	IN PCLIENT_ID ClientId
+HookZwWriteFile(
+	IN HANDLE FileHandle,
+	IN HANDLE Event OPTIONAL,
+	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
+	IN PVOID ApcContext OPTIONAL,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PVOID Buffer,
+	IN ULONG Length,
+	IN PLARGE_INTEGER ByteOffset OPTIONAL,
+	IN PULONG Key OPTIONAL
 );
 
 //SSDT
@@ -45,7 +50,6 @@ typedef struct _SERVICE_DESCRIPTOR_TABLE
 	ULONG NumberOfService;
 	ULONG ParamTableBase;
 }SERVICE_DESCRIPTOR_TABLE, *PSERVICE_DESCRIPTOR_TABLE;
-x
 extern "C" PSERVICE_DESCRIPTOR_TABLE KeServiceDescriptorTable;
 
 //Share Memory
