@@ -16,8 +16,6 @@ HookZwWriteFile(
 {
 	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
 	DbgPrint("Hit ZwWriteFile");
-	//if (PsGetCurrentProcessId() == ClientId->UniqueProcess)
-		//DbgPrint("Hit ZwWriteFile");
 	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
 	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
 

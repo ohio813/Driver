@@ -3,6 +3,16 @@
 
 #include "main.h"
 
+NTSYSAPI
+NTSTATUS
+NTAPI
+HookZwOpenProcess (
+    __out PHANDLE ProcessHandle,
+    __in ACCESS_MASK DesiredAccess,
+    __in POBJECT_ATTRIBUTES ObjectAttributes,
+    __in_opt PCLIENT_ID ClientId
+);
+
 NTSTATUS
 NTAPI
 HookZwWriteFile(
