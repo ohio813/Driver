@@ -1,6 +1,6 @@
 default : main.cpp main.h makefile
-	make -r controler.exe
+	make -r bin/controler.exe
 	
-controler.exe : main.cpp main.h makefile
-	g++ -Wall -g main.cpp -o controler.exe
+bin/controler.exe : main.cpp main.h makefile
+	g++ -Wall -g main.cpp -o bin/controler.exe
 	

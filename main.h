@@ -1,3 +1,6 @@
+#ifndef __main
+#define __main
+
 extern "C" 
 {
 	#include <ntddk.h>
@@ -28,20 +31,6 @@ ULONG GetAddress(ULONG ServiceID);
 ULONG GetProcAddress(ULONG ServiceID);
 ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress);
 
-NTSTATUS
-NTAPI
-HookZwWriteFile(
-	IN HANDLE FileHandle,
-	IN HANDLE Event OPTIONAL,
-	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
-	IN PVOID ApcContext OPTIONAL,
-	OUT PIO_STATUS_BLOCK IoStatusBlock,
-	IN PVOID Buffer,
-	IN ULONG Length,
-	IN PLARGE_INTEGER ByteOffset OPTIONAL,
-	IN PULONG Key OPTIONAL
-);
-
 //SSDT
 typedef struct _SERVICE_DESCRIPTOR_TABLE
 {
@@ -64,3 +53,14 @@ typedef struct _IO_PACKAGE
 	HANDLE hEvent;
 	HANDLE hCallBack;
 }IO_PACKAGE, *PIO_PACKAGE;
+
+
+
+static ULONG OldAddress, NewAddress;
+static bool hooking = false;
+static PSHARE pShare = NULL;
+static PMDL pMdl = NULL;
+static PKEVENT pEvent = NULL;
+static PKEVENT pCallBack = NULL;
+
+#endif
