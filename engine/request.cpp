@@ -1,8 +1,5 @@
-#include <windows.h>
 #include "request.h"
-#include "object.h"
 
-void send_request(int pid, HANDLE hObj)
+DWORD access_reuest(DWORD subject, HANDLE object, DWORD cmd)
 {
-	
 }

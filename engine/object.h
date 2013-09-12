@@ -5,7 +5,6 @@
 
 struct object
 {
-	HANDLE hObj;
 	int type;
 };
 
