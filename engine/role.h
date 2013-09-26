@@ -1,9 +1,13 @@
-#ifndef __RULE
-#define __RULE
+#ifndef __ROLE
+#define __ROLE
+
+#include <windows.h>
+#include <set>
 
 extern "C" 
 {
-	void test2();
+	bool role_check(DWORD, DWORD, DWORD);
+	DWORD attach_role(DWORD, DWORD);
 }
 
 #endif
