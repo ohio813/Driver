@@ -16,15 +16,15 @@ HookZwOpenProcess (
 NTSTATUS
 NTAPI
 HookZwWriteFile(
-	IN HANDLE FileHandle,
-	IN HANDLE Event OPTIONAL,
-	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
-	IN PVOID ApcContext OPTIONAL,
-	OUT PIO_STATUS_BLOCK IoStatusBlock,
-	IN PVOID Buffer,
-	IN ULONG Length,
-	IN PLARGE_INTEGER ByteOffset OPTIONAL,
-	IN PULONG Key OPTIONAL
+	__in HANDLE FileHandle,
+	__in HANDLE Event OPTIONAL,
+	__in PIO_APC_R__OUT__inE ApcRoutine OPTIONAL,
+	__in PVOID ApcContext OPTIONAL,
+	__out PIO_STATUS_BLOCK IoStatusBlock,
+	__in PVOID Buffer,
+	__in ULONG Length,
+	__in PLARGE___inTEGER ByteOffset OPTIONAL,
+	__in PULONG Key OPTIONAL
 );
 
 #endif
