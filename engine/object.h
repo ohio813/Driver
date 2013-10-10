@@ -3,9 +3,9 @@
 
 #include <windows.h>
 
-struct object
+typedef struct _object
 {
 	int type;
-};
+}OBJECT, *POBJECT;
 
 #endif

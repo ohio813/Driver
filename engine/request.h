@@ -21,9 +21,9 @@ struct REQUEST
 
 extern "C"
 {
-	DWORD request_subject(DWORD, LPCTSTR);
-	DWORD request_open(DWORD, LPCTSTR);
-	DWORD request_access(DWORD, HANDLE, DWORD);
+	DWORD request_subject(PSUBJECT, LPCTSTR);
+	DWORD request_open(PSUBJECT, LPCTSTR);
+	DWORD request_access(PSUBJECT, HANDLE, DWORD);
 }
 
 #endif

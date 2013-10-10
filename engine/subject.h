@@ -6,11 +6,11 @@
 #include "rule.h"
 #include "database.h"
 
-#define ROLE_NULL	0xff
+#define ROLE_NULL	NULL
 
 typedef struct _subject
 {
-	DWORD role;
+	PROLE role;
 }subject_data;
 
 typedef std::map<DWORD, subject_data> subject_map;
@@ -19,9 +19,9 @@ typedef subject_map::iterator subject_iter;
 extern subject_map subjects;
 
 extern "C" {
-	DWORD subject_query_role(DWORD subject);
-	DWORD subject_store(DWORD parent, DWORD pid, LPCTSTR file);
-	DWORD subject_clear(DWORD subject);
+	PROLE subject_query_role(DWORD subject);
+	bool subject_store(DWORD parent, DWORD pid, LPCTSTR file);
+	bool subject_clear(DWORD subject);
 }
 
 #endif
