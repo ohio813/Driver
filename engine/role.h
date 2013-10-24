@@ -5,6 +5,12 @@
 #include <set>
 #include <map>
 
+#define ROLE_NULL	0
+#define CMD_READ 	0x0
+#define CMD_WRITE	0xff
+#define CMD_EXEC	0x88
+#define CMD_ANY		0x55
+
 typedef struct _mask
 {
 	bool read;
@@ -12,7 +18,7 @@ typedef struct _mask
 	bool exec;
 } MASK, *PMASK;
 
-typedef std::map<DWORD, MASK> MATRIX, *PMATRIX;
+typedef std::map<HANDLE, MASK> MATRIX, *PMATRIX;
 typedef MATRIX::iterator MATRIX_iter;
 
 typedef struct _role_info
@@ -30,14 +36,14 @@ typedef role_map::iterator role_iter;
 
 typedef std::set<DWORD> ROLE, *PROLE;
 
-extern role_map roles
+extern role_map roles;
 
 extern "C" 
 {
-	bool role_check(PROLE, HANDLE, DWORD);
-	bool role_check(PROLE, LPCTSTR, DWORD);
-	bool role_attach(PROLE, DWORD);
-	bool role_attach(PROLE, PROLE);
+	bool role_check_handle(PROLE, HANDLE, DWORD);
+	bool role_check_file(PROLE, LPCTSTR, DWORD);
+	bool role_attach_role(PROLE, DWORD);
+	bool role_attach_parent(PROLE, PROLE);
 	bool role_dispose(PROLE);
 }
 

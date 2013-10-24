@@ -26,10 +26,10 @@ bool subject_store(DWORD parent, DWORD pid, LPCTSTR file)
 	bool ret = true;
 	subject_data data;
 	data.role = new ROLE();
-	if (!(ret = role_attach(data.role, db_query_exe_role(file))))
+	if (!(ret = role_attach_role(data.role, db_query_exe_role(file))))
 		return ret;
 	PROLE par = subject_query_role(parent);
 	if (!par == ROLE_NULL)
-		ret = role_attach(data.role, par);
+		ret = role_attach_parent(data.role, par);
 	return ret;
 }

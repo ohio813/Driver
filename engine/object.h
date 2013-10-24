@@ -2,6 +2,7 @@
 #define __OBJECT
 
 #include <windows.h>
+#include <map>
 
 typedef struct _object
 {

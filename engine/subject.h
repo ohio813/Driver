@@ -3,10 +3,8 @@
 
 #include <map>
 #include <windows.h>
-#include "rule.h"
+#include "role.h"
 #include "database.h"
-
-#define ROLE_NULL	NULL
 
 typedef struct _subject
 {

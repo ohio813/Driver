@@ -1,51 +1,57 @@
 #include "role.h"
 
-bool role_check(PROLE role, HANDLE object, DWORD cmd)
+role_map roles;
+
+bool role_check_handle(PROLE role, HANDLE object, DWORD cmd)
 {
 	bool ans = true;
 	for (ROLE::iterator iter = role -> begin(); iter != role -> end(); iter++)
 	{
 		role_iter info = roles.find(*iter);
-		if (role_iter == roles.end())
+		if (info == roles.end())
 		{
 			ans = false;
 		} else {
+			MATRIX_iter mask = info -> second -> matrix.find(object);
 			switch (cmd)
+			{
 			case CMD_READ:
-				ans = ans && role_iter -> second -> matrix.read;
+				ans = ans && mask -> second.read;
 				break;
 			case CMD_WRITE:
-				ans = ans && role_iter -> second -> matrix.write;
+				ans = ans && mask -> second.write;
 				break;
 			case CMD_EXEC:
-				ans = ans && role_iter -> second -> matrix.exec;
+				ans = ans && mask -> second.exec;
 				break;
 			case CMD_ANY:
-				ans = ans &&   (role_iter -> second -> matrix.read ||
-								role_iter -> second -> matrix.write ||
-								role_iter -> second -> matrix.exec);
+				ans = ans &&   (mask -> second.read ||
+								mask -> second.write ||
+								mask -> second.exec);
 				break;
 			default:
 				ans = false;
+			}
 		}
 	}
 	return ans;
 }
 
-bool role_check(PROLE role, LPCTSTR file, DWORD cmd)
+bool role_check_file(PROLE role, LPCTSTR file, DWORD cmd)
 {
 	//TODO
+	return false;
 }
 
-bool role_attach(PROLE role, DWORD access)
+bool role_attach_role(PROLE role, DWORD access)
 {
 	if (role -> find(access) == role -> end())
 	{
 		role -> insert(access);
-		role_iter iter = role_map.find(access);
-		if (iter == role_map.end())
+		role_iter iter = roles.find(access);
+		if (iter == roles.end())
 		{
-			role_map.insert(new ROLE_INFO());
+			roles.insert(std::make_pair(access, new ROLE_INFO()));
 		} else {
 			iter -> second -> ref_count++;
 		}
@@ -53,12 +59,12 @@ bool role_attach(PROLE role, DWORD access)
 	} else return false;
 }
 
-bool role_attach(PROLE role, PROLE parent)
+bool role_attach_parent(PROLE role, PROLE parent)
 {
 	if (parent -> empty())
 		return false;
 	for (ROLE::iterator iter = parent -> begin(); iter != parent -> end(); iter++)
-		role_attach(role, *iter);
+		role_attach_role(role, *iter);
 	return true;
 }
 
@@ -66,13 +72,13 @@ bool role_dispose(PROLE role)
 {
 	if (role)
 	{
-		for (ROLE::iterator iter = role -> begin(); iter != parent -> end(); iter++)
+		for (ROLE::iterator iter = role -> begin(); iter != role -> end(); iter++)
 		{
-			role_iter riter = role_map.find(*iter);
-			if (riter != role_map.end())
+			role_iter riter = roles.find(*iter);
+			if (riter != roles.end())
 			{
 				if ((--riter -> second -> ref_count) < 0)
-					role_map.erase(riter);
+					roles.erase(riter);
 			}
 		}
 		delete role;
