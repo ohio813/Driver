@@ -1,8 +1,35 @@
-#include "rule.h"
+#include "role.h"
 
 bool role_check(PROLE role, HANDLE object, DWORD cmd)
 {
-	//TODO
+	bool ans = true;
+	for (ROLE::iterator iter = role -> begin(); iter != role -> end(); iter++)
+	{
+		role_iter info = roles.find(*iter);
+		if (role_iter == roles.end())
+		{
+			ans = false;
+		} else {
+			switch (cmd)
+			case CMD_READ:
+				ans = ans && role_iter -> second -> matrix.read;
+				break;
+			case CMD_WRITE:
+				ans = ans && role_iter -> second -> matrix.write;
+				break;
+			case CMD_EXEC:
+				ans = ans && role_iter -> second -> matrix.exec;
+				break;
+			case CMD_ANY:
+				ans = ans &&   (role_iter -> second -> matrix.read ||
+								role_iter -> second -> matrix.write ||
+								role_iter -> second -> matrix.exec);
+				break;
+			default:
+				ans = false;
+		}
+	}
+	return ans;
 }
 
 bool role_check(PROLE role, LPCTSTR file, DWORD cmd)
@@ -20,7 +47,7 @@ bool role_attach(PROLE role, DWORD access)
 		{
 			role_map.insert(new ROLE_INFO());
 		} else {
-			iter -> second.ref_count++;
+			iter -> second -> ref_count++;
 		}
 		return true;
 	} else return false;
@@ -44,7 +71,7 @@ bool role_dispose(PROLE role)
 			role_iter riter = role_map.find(*iter);
 			if (riter != role_map.end())
 			{
-				if ((--riter -> second.ref_count) < 0)
+				if ((--riter -> second -> ref_count) < 0)
 					role_map.erase(riter);
 			}
 		}

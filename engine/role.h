@@ -30,6 +30,8 @@ typedef role_map::iterator role_iter;
 
 typedef std::set<DWORD> ROLE, *PROLE;
 
+extern role_map roles
+
 extern "C" 
 {
 	bool role_check(PROLE, HANDLE, DWORD);
