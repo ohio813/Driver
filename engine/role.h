@@ -11,12 +11,10 @@
 #define CMD_EXEC	0x88
 #define CMD_ANY		0x55
 
-typedef struct _mask
-{
-	bool read;
-	bool write;
-	bool exec;
-} MASK, *PMASK;
+typedef unsigned char MASK, *PMASK;
+
+#define CHECK_CMD(mask, offset)	((mask << offset) % 2)
+#define CHECK_ANY(mask)			(mask)
 
 typedef std::map<HANDLE, MASK> MATRIX, *PMATRIX;
 typedef MATRIX::iterator MATRIX_iter;

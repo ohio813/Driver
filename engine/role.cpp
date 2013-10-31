@@ -16,18 +16,16 @@ bool role_check_handle(PROLE role, HANDLE object, DWORD cmd)
 			switch (cmd)
 			{
 			case CMD_READ:
-				ans = ans && mask -> second.read;
+				ans = ans && CHECK_CMD(mask -> second, 2);
 				break;
 			case CMD_WRITE:
-				ans = ans && mask -> second.write;
+				ans = ans && CHECK_CMD(mask -> second, 1);
 				break;
 			case CMD_EXEC:
-				ans = ans && mask -> second.exec;
+				ans = ans && CHECK_CMD(mask -> second, 0);
 				break;
 			case CMD_ANY:
-				ans = ans &&   (mask -> second.read ||
-								mask -> second.write ||
-								mask -> second.exec);
+				ans = ans && CHECK_ANY(mask);
 				break;
 			default:
 				ans = false;

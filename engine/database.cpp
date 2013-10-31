@@ -16,10 +16,35 @@ LPCTSTR db_get_path(LPCTSTR src)
 	return ret;
 }
 
+void db_read_buffer(PBUFFER buffer, PFILE file)
+{
+	fread(buffer -> hash, sizeof(unsigned char), HASH_LEN, file);
+	fread(&buffer -> length, sizeof(int), 1, file);
+	buffer -> mask = new MASK[length];
+	fread(buffer -> mask, sizeof(MASK), length, file);
+}
+
+void db_write_buffer(PBUFFER buffer, PFILE file)
+{
+	fwrite(buffer -> hash, sizeof(unsigned char), HASH_LEN, file);
+	fwrite(&buffer -> length, sizeof(int), 1, file);
+	fwrite(buffer -> mask, sizeof(MASK), buffer -> length, file);
+}
+
+PBUFFER db_fetch(PFILE file)
+{
+	int count;
+	fread(&count, sizeof(int), 1, file);
+	PBUFFER ret = new PBUFFER[count];
+	for (int i = 0; i < count; ++i)
+		db_read_buffer(ret + i, file);
+	return ret;
+}
+
 DWORD db_query_exe_role(LPCTSTR file)
 {
 	LPCTSTR db_get_path(file);
-	FILE* input = fopen(file, "rb");
+	PFILE input = fopen(file, "rb");
 	if (input)
 	{
 		
