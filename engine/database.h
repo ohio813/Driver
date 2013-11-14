@@ -6,8 +6,7 @@
 #include <cstring>
 #include <tchar.h>
 #include <cstdio>
-#include <pair>
-#include <vector>
+#include <map>
 
 #define HASH_LEN	16
 
@@ -16,6 +15,7 @@ typedef FILE *PFILE;
 typedef struct _buffer
 {
 	unsigned char hash[HASH_LEN];
+	DWORD role;
 	int length;
 	PMASK mask;
 }BUFFER, *PBUFFER;
@@ -26,7 +26,7 @@ extern "C" {
 	LPCTSTR db_get_path(LPCTSTR);
 	void db_read_buffer(PBUFFER, PFILE);
 	void db_write_buffer(PBUFFER, PFILE);
-	PBUFFER db_fetch(PFILE);
+	std::pair<PBUFFER, int> db_fetch(PFILE file);
 	DWORD db_query_exe_role(LPCTSTR);
 }
 

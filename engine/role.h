@@ -14,7 +14,7 @@
 typedef unsigned char MASK, *PMASK;
 
 #define CHECK_CMD(mask, offset)	((mask << offset) % 2)
-#define CHECK_ANY(mask)			(mask)
+#define CHECK_ANY(mask)			(mask != 0)
 
 typedef std::map<HANDLE, MASK> MATRIX, *PMATRIX;
 typedef MATRIX::iterator MATRIX_iter;
