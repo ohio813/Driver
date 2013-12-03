@@ -2,6 +2,29 @@
 
 role_map roles;
 
+bool role_check_mask(MASK mask, DWORD cmd)
+{
+	bool ans = true;
+	switch (cmd)
+	{
+		case CMD_READ:
+			ans = ans && CHECK_CMD(mask -> second, 2);
+			break;
+		case CMD_WRITE:
+			ans = ans && CHECK_CMD(mask -> second, 1);
+			break;
+		case CMD_EXEC:
+			ans = ans && CHECK_CMD(mask -> second, 0);
+			break;
+		case CMD_ANY:
+			ans = ans && CHECK_ANY(mask);
+			break;
+		default:
+			ans = false;
+	}
+	return ans;
+}
+
 bool role_check_handle(PROLE role, HANDLE object, DWORD cmd)
 {
 	bool ans = true;
@@ -13,23 +36,8 @@ bool role_check_handle(PROLE role, HANDLE object, DWORD cmd)
 			ans = false;
 		} else {
 			MATRIX_iter mask = info -> second -> matrix.find(object);
-			switch (cmd)
-			{
-			case CMD_READ:
-				ans = ans && CHECK_CMD(mask -> second, 2);
-				break;
-			case CMD_WRITE:
-				ans = ans && CHECK_CMD(mask -> second, 1);
-				break;
-			case CMD_EXEC:
-				ans = ans && CHECK_CMD(mask -> second, 0);
-				break;
-			case CMD_ANY:
-				ans = ans && CHECK_ANY(mask);
-				break;
-			default:
-				ans = false;
-			}
+			if (mask != info -> second -> matrix.end())
+				ans = ans && role_check_mask(mask -> second, cmd);
 		}
 	}
 	return ans;
@@ -37,8 +45,8 @@ bool role_check_handle(PROLE role, HANDLE object, DWORD cmd)
 
 bool role_check_file(PROLE role, LPCTSTR file, DWORD cmd)
 {
-	//TODO
-	return false;
+	MASK mask = db_query_file(file, role);
+	return role_check_mask(mask, cmd);
 }
 
 bool role_attach_role(PROLE role, DWORD access)

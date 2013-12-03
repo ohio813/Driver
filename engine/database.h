@@ -12,12 +12,14 @@
 
 typedef FILE *PFILE;
 
+typedef pair<DWORD, MASK> DM, *PDM;
+
 typedef struct _buffer
 {
 	unsigned char hash[HASH_LEN];
 	DWORD role;
 	int length;
-	PMASK mask;
+	PDM row;
 }BUFFER, *PBUFFER;
 
 #define DATA_FILE	"\\lc.lc"
@@ -28,6 +30,7 @@ extern "C" {
 	void db_write_buffer(PBUFFER, PFILE);
 	std::pair<PBUFFER, int> db_fetch(PFILE file);
 	DWORD db_query_exe_role(LPCTSTR);
+	MASK db_query_file(LPCTSTR, DWORD);
 }
 
 #endif

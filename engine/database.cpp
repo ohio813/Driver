@@ -21,8 +21,8 @@ void db_read_buffer(PBUFFER buffer, PFILE file)
 	fread(buffer -> hash, sizeof(unsigned char), HASH_LEN, file);
 	fread(&buffer -> role, sizeof(DWORD), 1, file);
 	fread(&buffer -> length, sizeof(int), 1, file);
-	buffer -> mask = new MASK[buffer -> length];
-	fread(buffer -> mask, sizeof(MASK), buffer -> length, file);
+	buffer -> row = new DM[buffer -> length];
+	fread(buffer -> row, sizeof(DM), buffer -> length, file);
 }
 
 void db_write_buffer(PBUFFER buffer, PFILE file)
@@ -30,7 +30,15 @@ void db_write_buffer(PBUFFER buffer, PFILE file)
 	fwrite(buffer -> hash, sizeof(unsigned char), HASH_LEN, file);
 	fwrite(&buffer -> role, sizeof(DWORD), 1, file);
 	fwrite(&buffer -> length, sizeof(int), 1, file);
-	fwrite(buffer -> mask, sizeof(MASK), buffer -> length, file);
+	fwrite(buffer -> row, sizeof(DM), buffer -> length, file);
+}
+
+void db_release_buffer(PBUFFER buffer, int cnt)
+{
+	for (int i = 0; i < cnt; ++i)
+		if (buffer[i].row)
+			delete[] buffer[i].row
+	delete[] buffer;
 }
 
 std::pair<PBUFFER, int> db_fetch(PFILE file)
@@ -63,8 +71,8 @@ void db_get_hash(LPCTSTR file, unsigned char* ret)
 DWORD db_query_exe_role(LPCTSTR file)
 {
 	DWORD ret = ROLE_NULL;
-	LPCTSTR db_get_path(file);
-	PFILE input = fopen(file, "rb");
+	LPCTSTR path = db_get_path(file);
+	PFILE input = fopen(path, "rb");
 	if (input)
 	{
 		unsigned char hash[HASH_LEN];
@@ -76,7 +84,35 @@ DWORD db_query_exe_role(LPCTSTR file)
 				ret = buffer.first[i].role;
 				break;
 			}
-		delete []buffer.first;
+		db_release_buffer(buffer.first, buffer.second);
+	} else {
+		//TODO
+	}
+	return ret;
+}
+
+MASK db_query_file(LPCTSTR file, DWORD role)
+{
+	MASK ret = MASK_NULL;
+	LPCTSTR path = db_get_path(file);
+	PFILE input = fopen(path, "rb");
+	if (input)
+	{
+		unsigned char hash[HASH_LEN];
+		db_get_hash(file, hash);
+		std::pair<PBUFFER, int> buffer = db_fetch(input);
+		for (int i = 0; i < buffer.second; ++i)
+			if (db_compare_hash(buffer.first[i].hash, hash))
+			{
+				for (int j = 0; j < buffer.first[i].lenght; ++j)
+					if (buffer.first[i].row[j].first == role)
+					{
+						ret = buffer.first[i].row[j].second;
+						break;
+					}
+				break;
+			}
+		db_release_buffer(buffer.first, buffer.second);
 	} else {
 		//TODO
 	}

@@ -10,6 +10,7 @@
 #define CMD_WRITE	0xff
 #define CMD_EXEC	0x88
 #define CMD_ANY		0x55
+#define MASK_NULL	0xff
 
 typedef unsigned char MASK, *PMASK;
 
