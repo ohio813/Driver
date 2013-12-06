@@ -23,9 +23,10 @@ typedef struct _buffer
 }BUFFER, *PBUFFER;
 
 #define DATA_FILE	"\\lc.lc"
+#define LOG_FILE	"\\lc.log"
 
 extern "C" {
-	LPCTSTR db_get_path(LPCTSTR);
+	LPCTSTR db_get_path(LPCTSTR, LPCTSTR);
 	void db_read_buffer(PBUFFER, PFILE);
 	void db_write_buffer(PBUFFER, PFILE);
 	std::pair<PBUFFER, int> db_fetch(PFILE file);

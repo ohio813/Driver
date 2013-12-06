@@ -9,6 +9,7 @@
 typedef struct _subject
 {
 	PROLE role;
+	LPCTSTR path;
 }subject_data;
 
 typedef std::map<DWORD, subject_data> subject_map;
@@ -18,6 +19,7 @@ extern subject_map subjects;
 
 extern "C" {
 	PROLE subject_query_role(DWORD subject);
+	LPCTSTR subject_query_path(DWORD subject);
 	bool subject_store(DWORD parent, DWORD pid, LPCTSTR file);
 	bool subject_clear(DWORD subject);
 }

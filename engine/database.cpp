@@ -1,9 +1,9 @@
 #include "database.h"
 
-LPCTSTR db_get_path(LPCTSTR src)
+LPCTSTR db_get_path(LPCTSTR src, LPCTSTR name)
 {
 	int src_size = _tcslen(src);
-	int size = _tcslen(DATA_FILE);
+	int size = _tcslen(name);
 	TCHAR* ret = new TCHAR[(src_size + size + 1) * sizeof(TCHAR)];
 	int k = src_size;
 	for (const TCHAR* pos = src + src_size; pos != ret && *pos != '/' && *pos != '\\'; --pos)
@@ -11,7 +11,7 @@ LPCTSTR db_get_path(LPCTSTR src)
 	for (int i = 0; i < k; ++i)
 		ret[i] = src[i];
 	for (int i = 0; i < size; ++i)
-		ret[k++] = DATA_FILE[i];
+		ret[k++] = name[i];
 	ret[k] = 0;
 	return ret;
 }
@@ -71,7 +71,7 @@ void db_get_hash(LPCTSTR file, unsigned char* ret)
 DWORD db_query_exe_role(LPCTSTR file)
 {
 	DWORD ret = ROLE_NULL;
-	LPCTSTR path = db_get_path(file);
+	LPCTSTR path = db_get_path(file, DATA_FILE);
 	PFILE input = fopen(path, "rb");
 	if (input)
 	{
@@ -94,7 +94,7 @@ DWORD db_query_exe_role(LPCTSTR file)
 MASK db_query_file(LPCTSTR file, DWORD role)
 {
 	MASK ret = MASK_NULL;
-	LPCTSTR path = db_get_path(file);
+	LPCTSTR path = db_get_path(file, DATA_FILE);
 	PFILE input = fopen(path, "rb");
 	if (input)
 	{
