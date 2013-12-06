@@ -18,7 +18,7 @@ LPCTSTR db_get_path(LPCTSTR src, LPCTSTR name)
 
 void db_read_buffer(PBUFFER buffer, PFILE file)
 {
-	fread(buffer -> hash, sizeof(unsigned char), HASH_LEN, file);
+	fread(buffer -> hash, sizeof(HASH), 1, file);
 	fread(&buffer -> role, sizeof(DWORD), 1, file);
 	fread(&buffer -> length, sizeof(int), 1, file);
 	buffer -> row = new DM[buffer -> length];
@@ -27,7 +27,7 @@ void db_read_buffer(PBUFFER buffer, PFILE file)
 
 void db_write_buffer(PBUFFER buffer, PFILE file)
 {
-	fwrite(buffer -> hash, sizeof(unsigned char), HASH_LEN, file);
+	fwrite(buffer -> hash, sizeof(HASH), 1, file);
 	fwrite(&buffer -> role, sizeof(DWORD), 1, file);
 	fwrite(&buffer -> length, sizeof(int), 1, file);
 	fwrite(buffer -> row, sizeof(DM), buffer -> length, file);
@@ -51,21 +51,21 @@ std::pair<PBUFFER, int> db_fetch(PFILE file)
 	return std::make_pair(ret, count);
 }
 
-bool db_compare_hash(unsigned char* hash1, unsigned char* hash2)
+bool db_compare_hash(HASH hash1, HASH hash2)
 {
 	for (int i = 0; i < HASH_LEN; ++i)
-		if (hash1[i] != hash2[i])
+		if (hash1.data[i] != hash2.data[i])
 			return false;
 	return true;
 }
 
-void db_get_hash(LPCTSTR file, unsigned char* ret)
+HASH db_get_hash(LPCTSTR file)
 {
 	MD5_CTX context;
-	unsigned int length = strlen(file);
+	unsigned int length = _tcslen(file);
 	MD5Init(&context);
 	MD5Update(&context, (unsigned char*) file, length);
-	MD5Final(ret, &context);
+	MD5Final(HASH.data, &context);
 }
 
 DWORD db_query_exe_role(LPCTSTR file)
@@ -75,8 +75,7 @@ DWORD db_query_exe_role(LPCTSTR file)
 	PFILE input = fopen(path, "rb");
 	if (input)
 	{
-		unsigned char hash[HASH_LEN];
-		db_get_hash(file, hash);
+		HASH hash = db_get_hash(file);
 		std::pair<PBUFFER, int> buffer = db_fetch(input);
 		for (int i = 0; i < buffer.second; ++i)
 			if (db_compare_hash(buffer.first[i].hash, hash))
@@ -98,8 +97,7 @@ MASK db_query_file(LPCTSTR file, DWORD role)
 	PFILE input = fopen(path, "rb");
 	if (input)
 	{
-		unsigned char hash[HASH_LEN];
-		db_get_hash(file, hash);
+		HASH hash = db_get_hash(file);
 		std::pair<PBUFFER, int> buffer = db_fetch(input);
 		for (int i = 0; i < buffer.second; ++i)
 			if (db_compare_hash(buffer.first[i].hash, hash))

@@ -35,6 +35,7 @@ bool subject_store(DWORD parent, DWORD pid, LPCTSTR file)
 	bool ret = true;
 	subject_data data;
 	data.path = file;
+	log_query_file(file, data.log);
 	data.role = new ROLE();
 	if (!(ret = role_attach_role(data.role, db_query_exe_role(file))))
 		return ret;
@@ -42,4 +43,14 @@ bool subject_store(DWORD parent, DWORD pid, LPCTSTR file)
 	if (!par == ROLE_NULL)
 		ret = role_attach_parent(data.role, par);
 	return ret;
+}
+
+DWORD subject_compare(DWORD subject1, DWORD subject2)
+{
+	DWORD sum1 = 0;
+	DWORD sum2 = 0;
+	for (LOG_iter i = subject1.log.begin(); i != subject1.log.end(); ++i)
+		sum1 += i -> second;
+	for (LOG_iter i = subject2.log.begin(); i != subject2.log.end(); ++i)
+		sum2 += i -> second;
 }

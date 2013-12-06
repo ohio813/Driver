@@ -10,6 +10,7 @@ typedef struct _subject
 {
 	PROLE role;
 	LPCTSTR path;
+	LOG log;
 }subject_data;
 
 typedef std::map<DWORD, subject_data> subject_map;
@@ -18,10 +19,11 @@ typedef subject_map::iterator subject_iter;
 extern subject_map subjects;
 
 extern "C" {
-	PROLE subject_query_role(DWORD subject);
-	LPCTSTR subject_query_path(DWORD subject);
-	bool subject_store(DWORD parent, DWORD pid, LPCTSTR file);
-	bool subject_clear(DWORD subject);
+	PROLE subject_query_role(DWORD);
+	LPCTSTR subject_query_path(DWORD);
+	bool subject_store(DWORD, DWORD, LPCTSTR);
+	bool subject_clear(DWORD);
+	DWORD subject_compare(DWORD);
 }
 
 #endif

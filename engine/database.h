@@ -10,13 +10,31 @@
 
 #define HASH_LEN	16
 
+typedef struct _hash
+{
+	unsigned char data[HASH_LEN];
+	friend bool operator <(_hash a, _hash b)
+	{
+		for (int i = 0; i < HASH_LEN; ++i)
+			if (a.data[i] < b.data[i])
+			{
+				return true;
+			}
+			else if (a.data[i] > b.data[i])
+			{
+				return false;
+			}
+		return false;
+	}
+}HASH, *PHASH
+
 typedef FILE *PFILE;
 
 typedef pair<DWORD, MASK> DM, *PDM;
 
 typedef struct _buffer
 {
-	unsigned char hash[HASH_LEN];
+	HASH hash;
 	DWORD role;
 	int length;
 	PDM row;

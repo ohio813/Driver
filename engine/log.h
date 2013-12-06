@@ -7,11 +7,12 @@
 
 #define LOG_SIZE 256
 
-typedef std::pair<DWORD, int> DI, *PDI;
+typedef std::map<HASH, DWORD> LOG;
+typedef LOG::iterator LOG_iter;
 
-typedef struct _log_buffer
+extern "C"
 {
-	DI data[LOG_SIZE];
-}LOG, *PLOG;
+	void log_query_file(LPCTSTR, LOG);
+}
 
 #endif
