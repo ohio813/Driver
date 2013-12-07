@@ -11,10 +11,16 @@
 #define CODE_DENY				0
 #define THREADS					10
 
+#define ID_ZwWriteFile			274
+#define ID_ZwCreateFile			37
+
 //Share Memory
+#define STR_SIZE	256
 typedef struct _SHARE
 {
+	ULONG id;
 	int Code;
+	WCHAR Str[STR_SIZE];
 }SHARE, *PSHARE;
 
 //IO

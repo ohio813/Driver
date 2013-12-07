@@ -1,6 +1,7 @@
 #include "main.h"
 
-static ULONG OldAddress, NewAddress;
+static ULONG OldAddress[SERVICE_COUNT];
+static ULONG NewAddress[SERVICE_COUNT];
 static bool hooking = false;
 static PSHARE pShare = NULL;
 static PMDL pMdl = NULL;
@@ -65,7 +66,27 @@ ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress)
 	CloseProtection();
 
 	return old;
+}
 
+void HookService(PVOID Service, bool hook, bool debug)
+{
+	ULONG id = SERVICE_INDEX(Service);
+	if (hook)
+	{
+		if (debug)
+			DbgPrint("Hook on Service: %d", id);
+		OldAddress[id] = ModifyProcAddress(id, NewAddress[id]);
+	} else {
+		if (debug)
+			DbgPrint("Hook off Service: %d", id);
+		ModifyProcAddress(id, OldAddress[id]);
+	}
+}
+
+void LoadAddress(void)
+{
+	NewAddress[SERVICE_INDEX(ZwWriteFile)] = (ULONG)HookZwWriteFile;
+	NewAddress[SERVICE_INDEX(ZwCreateFile)] = (ULONG)HookZwCreateFile;
 }
 
 NTSTATUS
@@ -82,10 +103,10 @@ HookZwWriteFile(
 	IN PULONG Key OPTIONAL
 )
 {
-	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
+	HookService(ZwWriteFile, false, false);
 	DbgPrint("Hit ZwWriteFile");
-	//if (PsGetCurrentProcessId() == ClientId->UniqueProcess)
-		//DbgPrint("Hit ZwWriteFile");
+	pShare -> id = SERVICE_INDEX(ZwWriteFile);
+
 	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
 	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
 
@@ -115,7 +136,72 @@ HookZwWriteFile(
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), NewAddress);
+	HookService(ZwWriteFile, true, false);
+	return ret;
+}
+
+NTSTATUS
+NTAPI
+HookZwCreateFile (
+	OUT PHANDLE FileHandle,
+	IN ACCESS_MASK DesiredAccess,
+	IN POBJECT_ATTRIBUTES ObjectAttributes,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PLARGE_INTEGER AllocationSize OPTIONAL,
+	IN ULONG FileAttributes,
+	IN ULONG ShareAccess,
+	IN ULONG CreateDisposition,
+	IN ULONG CreateOptions,
+	IN PVOID EaBuffer OPTIONAL,
+	IN ULONG EaLength
+)
+{
+	HookService(ZwCreateFile, false, false);
+	DbgPrint("Hit ZwCreateFile");
+	pShare -> id = SERVICE_INDEX(ZwCreateFile);
+	DbgPrint("FileName: %wZ\n", ObjectAttributes -> ObjectName);
+	/*
+	if (ObjectAttributes -> ObjectName -> Length < STR_SIZE)
+	{
+		UNICODE_STRING tmp;
+		RtlInitEmptyUnicodeString(&tmp, pShare -> Str, STR_SIZE * sizeof(WCHAR));
+		RtlCopyUnicodeString(&tmp, ObjectAttributes -> ObjectName);
+		pShare -> Str[ObjectAttributes -> ObjectName -> Length] = '\0';
+	}
+	*/
+
+	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
+	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+
+	int code = pShare -> Code;
+	NTSTATUS ret;
+	switch (code)
+	{
+	case CODE_ALLOW:
+		DbgPrint("Allowed\n");
+		ret = ZwCreateFile(
+			FileHandle,
+			DesiredAccess,
+			ObjectAttributes,
+			IoStatusBlock,
+			AllocationSize,
+			FileAttributes,
+			ShareAccess,
+			CreateDisposition,
+			CreateOptions,
+			EaBuffer,
+			EaLength
+			);
+		break;
+	case CODE_DENY:
+		DbgPrint("Denied\n");
+		ret = STATUS_ACCESS_DENIED;
+		break;
+	default:
+		DbgPrint("UNEXPECTED\n");
+		ret = STATUS_UNEXPECTED_IO_ERROR;
+	}
+	HookService(ZwCreateFile, true, false);
 	return ret;
 }
 
@@ -162,6 +248,8 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 
+	LoadAddress();
+
 	return STATUS_SUCCESS;
 }
 
@@ -172,7 +260,10 @@ void HookUnload(IN PDRIVER_OBJECT DriverObject)
 	ExFreePool(pShare);
 
 	if (hooking)
-		ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
+	{
+		HookService(ZwWriteFile, false, true);
+		HookService(ZwCreateFile, false, true);
+	}
 
 	UNICODE_STRING Win32Device;
 	RtlInitUnicodeString(&Win32Device,L"\\DosDevices\\Hook");
@@ -236,9 +327,8 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
 				break;
 			}
-			DbgPrint("Hook On of service %d\n", SERVICE_INDEX(ZwWriteFile));
-			NewAddress = (ULONG)HookZwWriteFile;
-			OldAddress = ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), NewAddress);
+			HookService(ZwWriteFile, true, true);
+			HookService(ZwCreateFile, true, true);
 			hooking = true;
 		}
 		break;
@@ -247,8 +337,8 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	{
 		if (hooking)
 		{
-			DbgPrint("Hook Off\n");
-			ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
+			HookService(ZwWriteFile, false, true);
+			HookService(ZwCreateFile, false, true);
 			hooking = false;
 		}
 		else

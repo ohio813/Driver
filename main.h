@@ -13,6 +13,7 @@ extern "C"
 #define SERVICE_INDEX(FuncName)	(*(PULONG)((PUCHAR)FuncName+1))
 #define CODE_ALLOW				0xff
 #define CODE_DENY				0
+#define SERVICE_COUNT			400
 
 //Driver Functions
 extern "C" NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  RegistryPath);
@@ -27,6 +28,8 @@ void CloseProtection(void);
 ULONG GetAddress(ULONG ServiceID);
 ULONG GetProcAddress(ULONG ServiceID);
 ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress);
+void HookService(PVOID, bool, bool);
+void LoadAddress(void);
 
 NTSTATUS
 NTAPI
@@ -42,6 +45,22 @@ HookZwWriteFile(
 	IN PULONG Key OPTIONAL
 );
 
+NTSTATUS
+NTAPI
+HookZwCreateFile(
+	OUT PHANDLE FileHandle,
+	IN ACCESS_MASK DesiredAccess,
+	IN POBJECT_ATTRIBUTES ObjectAttributes,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PLARGE_INTEGER AllocationSize OPTIONAL,
+	IN ULONG FileAttributes,
+	IN ULONG ShareAccess,
+	IN ULONG CreateDisposition,
+	IN ULONG CreateOptions,
+	IN PVOID EaBuffer OPTIONAL,
+	IN ULONG EaLength
+);
+
 //SSDT
 typedef struct _SERVICE_DESCRIPTOR_TABLE
 {
@@ -53,9 +72,12 @@ typedef struct _SERVICE_DESCRIPTOR_TABLE
 extern "C" PSERVICE_DESCRIPTOR_TABLE KeServiceDescriptorTable;
 
 //Share Memory
+#define STR_SIZE	256
 typedef struct _SHARE
 {
+	ULONG id;
 	int Code;
+	WCHAR Str[STR_SIZE];
 }SHARE, *PSHARE;
 
 //IO

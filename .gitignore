@@ -2,5 +2,6 @@
 *.exe
 objfre*
 *.log
+*.wrn
 *.sublime*
 *test*
