@@ -5,6 +5,7 @@
 #include <windows.h>
 #include "role.h"
 #include "database.h"
+#include "log.h"
 
 typedef struct _subject
 {

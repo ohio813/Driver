@@ -26,11 +26,11 @@ typedef struct _hash
 			}
 		return false;
 	}
-}HASH, *PHASH
+}HASH, *PHASH;
 
 typedef FILE *PFILE;
 
-typedef pair<DWORD, MASK> DM, *PDM;
+typedef std::pair<DWORD, MASK> DM, *PDM;
 
 typedef struct _buffer
 {

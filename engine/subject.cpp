@@ -20,6 +20,15 @@ LPCTSTR subject_query_path(DWORD subject)
 		return ret -> second.path;
 }
 
+PLOG subject_query_log(DWORD subject)
+{
+	subject_iter ret = subjects.find(subject);
+	if (ret == subjects.end())
+		return NULL;
+	else
+		return &(ret -> second.log);
+}
+
 bool subject_clear(DWORD subject)
 {
 	subject_iter iter = subjects.find(subject);
@@ -49,8 +58,10 @@ DWORD subject_compare(DWORD subject1, DWORD subject2)
 {
 	DWORD sum1 = 0;
 	DWORD sum2 = 0;
-	for (LOG_iter i = subject1.log.begin(); i != subject1.log.end(); ++i)
+	PLOG log1 = subject_query_log(subject1);
+	PLOG log2 = subject_query_log(subject2);
+	for (LOG_iter i = log1 -> begin(); i != log1 -> end(); ++i)
 		sum1 += i -> second;
-	for (LOG_iter i = subject2.log.begin(); i != subject2.log.end(); ++i)
+	for (LOG_iter i = log2 -> begin(); i != log2 -> end(); ++i)
 		sum2 += i -> second;
 }

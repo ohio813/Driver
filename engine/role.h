@@ -37,6 +37,8 @@ typedef std::set<DWORD> ROLE, *PROLE;
 
 extern role_map roles;
 
+#include "database.h"
+
 extern "C" 
 {
 	bool role_check_handle(PROLE, HANDLE, DWORD);

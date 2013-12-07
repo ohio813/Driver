@@ -4,17 +4,19 @@ role_map roles;
 
 bool role_check_mask(MASK mask, DWORD cmd)
 {
+	if (mask == MASK_NULL)
+		return false;
 	bool ans = true;
 	switch (cmd)
 	{
 		case CMD_READ:
-			ans = ans && CHECK_CMD(mask -> second, 2);
+			ans = ans && CHECK_CMD(mask, 2);
 			break;
 		case CMD_WRITE:
-			ans = ans && CHECK_CMD(mask -> second, 1);
+			ans = ans && CHECK_CMD(mask, 1);
 			break;
 		case CMD_EXEC:
-			ans = ans && CHECK_CMD(mask -> second, 0);
+			ans = ans && CHECK_CMD(mask, 0);
 			break;
 		case CMD_ANY:
 			ans = ans && CHECK_ANY(mask);
@@ -45,8 +47,13 @@ bool role_check_handle(PROLE role, HANDLE object, DWORD cmd)
 
 bool role_check_file(PROLE role, LPCTSTR file, DWORD cmd)
 {
-	MASK mask = db_query_file(file, role);
-	return role_check_mask(mask, cmd);
+	bool ans = true;
+	for (ROLE::iterator iter = role -> begin(); iter != role -> end(); iter++)
+	{
+		MASK mask = db_query_file(file, *iter);
+		ans = ans && role_check_mask(mask, cmd);
+	}
+	return ans;
 }
 
 bool role_attach_role(PROLE role, DWORD access)

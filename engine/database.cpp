@@ -18,7 +18,7 @@ LPCTSTR db_get_path(LPCTSTR src, LPCTSTR name)
 
 void db_read_buffer(PBUFFER buffer, PFILE file)
 {
-	fread(buffer -> hash, sizeof(HASH), 1, file);
+	fread(&buffer -> hash, sizeof(HASH), 1, file);
 	fread(&buffer -> role, sizeof(DWORD), 1, file);
 	fread(&buffer -> length, sizeof(int), 1, file);
 	buffer -> row = new DM[buffer -> length];
@@ -27,7 +27,7 @@ void db_read_buffer(PBUFFER buffer, PFILE file)
 
 void db_write_buffer(PBUFFER buffer, PFILE file)
 {
-	fwrite(buffer -> hash, sizeof(HASH), 1, file);
+	fwrite(&buffer -> hash, sizeof(HASH), 1, file);
 	fwrite(&buffer -> role, sizeof(DWORD), 1, file);
 	fwrite(&buffer -> length, sizeof(int), 1, file);
 	fwrite(buffer -> row, sizeof(DM), buffer -> length, file);
@@ -37,7 +37,7 @@ void db_release_buffer(PBUFFER buffer, int cnt)
 {
 	for (int i = 0; i < cnt; ++i)
 		if (buffer[i].row)
-			delete[] buffer[i].row
+			delete[] buffer[i].row;
 	delete[] buffer;
 }
 
@@ -61,11 +61,13 @@ bool db_compare_hash(HASH hash1, HASH hash2)
 
 HASH db_get_hash(LPCTSTR file)
 {
+	HASH ret;
 	MD5_CTX context;
 	unsigned int length = _tcslen(file);
 	MD5Init(&context);
 	MD5Update(&context, (unsigned char*) file, length);
-	MD5Final(HASH.data, &context);
+	MD5Final(ret.data, &context);
+	return ret;
 }
 
 DWORD db_query_exe_role(LPCTSTR file)
@@ -102,7 +104,7 @@ MASK db_query_file(LPCTSTR file, DWORD role)
 		for (int i = 0; i < buffer.second; ++i)
 			if (db_compare_hash(buffer.first[i].hash, hash))
 			{
-				for (int j = 0; j < buffer.first[i].lenght; ++j)
+				for (int j = 0; j < buffer.first[i].length; ++j)
 					if (buffer.first[i].row[j].first == role)
 					{
 						ret = buffer.first[i].row[j].second;
