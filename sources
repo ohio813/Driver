@@ -1,4 +1,4 @@
 TARGETNAME=driver1
 TARGETTYPE=DRIVER
 TARGETPATH=obj
-SOURCES=main.cpp hook.cpp
+SOURCES=main.cpp

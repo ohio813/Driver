@@ -1,5 +1,11 @@
 #include "main.h"
-#include "hook.h"
+
+static ULONG OldAddress, NewAddress;
+static bool hooking = false;
+static PSHARE pShare = NULL;
+static PMDL pMdl = NULL;
+static PKEVENT pEvent = NULL;
+static PKEVENT pCallBack = NULL;
 
 void OpenProtection()
 {
@@ -62,6 +68,57 @@ ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress)
 
 }
 
+NTSTATUS
+NTAPI
+HookZwWriteFile(
+	IN HANDLE FileHandle,
+	IN HANDLE Event OPTIONAL,
+	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
+	IN PVOID ApcContext OPTIONAL,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PVOID Buffer,
+	IN ULONG Length,
+	IN PLARGE_INTEGER ByteOffset OPTIONAL,
+	IN PULONG Key OPTIONAL
+)
+{
+	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), OldAddress);
+	DbgPrint("Hit ZwWriteFile");
+	//if (PsGetCurrentProcessId() == ClientId->UniqueProcess)
+		//DbgPrint("Hit ZwWriteFile");
+	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
+	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+
+	int code = pShare -> Code;
+	NTSTATUS ret;
+	switch (code)
+	{
+	case CODE_ALLOW:
+		DbgPrint("Allowed\n");
+		ret = ZwWriteFile(
+			FileHandle,
+			Event,
+			ApcRoutine,
+			ApcContext,
+			IoStatusBlock,
+			Buffer,
+			Length,
+			ByteOffset,
+			Key
+			);
+		break;
+	case CODE_DENY:
+		DbgPrint("Denied\n");
+		ret = STATUS_ACCESS_DENIED;
+		break;
+	default:
+		DbgPrint("UNEXPECTED\n");
+		ret = STATUS_UNEXPECTED_IO_ERROR;
+	}
+	ModifyProcAddress(SERVICE_INDEX(ZwWriteFile), NewAddress);
+	return ret;
+}
+
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  RegistryPath)
 {
 	UNICODE_STRING DeviceName,Win32Device;
@@ -97,7 +154,6 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 	pMdl = IoAllocateMdl(pShare, sizeof(PSHARE), FALSE, FALSE, NULL);
 	MmBuildMdlForNonPagedPool(pMdl);
 	DbgPrint("Share Memory Address:0x%08X\n", (ULONG)pShare);
-	DbgPrint("SSDT count:%d\n", KeServiceDescriptorTable->NumberOfService);
 	pShare -> Code = CODE_ALLOW;
 
 	DeviceObject->Flags |= DO_DIRECT_IO;
