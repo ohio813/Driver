@@ -51,8 +51,8 @@ DWORD WINAPI work (LPVOID lpParam)
 		pShare -> Code = CODE_ALLOW;
 		SetEvent(hCallBack);
 		printf("Event hit: %d\n", pShare -> id);
-		if (pShare -> id == ID_ZwCreateFile)
-			printf("%S\n", pShare -> Str);
+		//if (pShare -> id == ID_ZwCreateFile)
+			//printf("%S\n", pShare -> Str);
 		printf("Allowed\n");
 	}
 }
