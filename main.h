@@ -30,6 +30,8 @@ ULONG GetProcAddress(ULONG ServiceID);
 ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress);
 void HookService(PVOID, bool, bool);
 void LoadAddress(void);
+void PreWork(PVOID, PCHAR);
+void AfterWork(PVOID);
 
 NTSTATUS
 NTAPI

@@ -7,6 +7,8 @@ static PSHARE pShare = NULL;
 static PMDL pMdl = NULL;
 static PKEVENT pEvent = NULL;
 static PKEVENT pCallBack = NULL;
+static int cntHook = 0;
+static bool bExit = false;
 
 void OpenProtection()
 {
@@ -89,6 +91,20 @@ void LoadAddress(void)
 	NewAddress[SERVICE_INDEX(ZwCreateFile)] = (ULONG)HookZwCreateFile;
 }
 
+void PreWork(PVOID func, PCHAR msg)
+{
+	HookService(func, false, false);
+	DbgPrint("Hit: %s", msg);
+	++cntHook;
+	DbgPrint("Count: %d\n", cntHook);
+	pShare -> id = SERVICE_INDEX(func);
+}
+
+void AfterWork(PVOID func)
+{
+	HookService(func, true, false);
+}
+
 NTSTATUS
 NTAPI
 HookZwWriteFile(
@@ -103,13 +119,17 @@ HookZwWriteFile(
 	IN PULONG Key OPTIONAL
 )
 {
-	HookService(ZwWriteFile, false, false);
-	DbgPrint("Hit ZwWriteFile");
+	//PreWork(ZwWriteFile, "ZwWriteFile");
+	DbgPrint("Hit: %s", "ZwWriteFile");
+	++cntHook;
+	DbgPrint("Count: %d\n", cntHook);
 	pShare -> id = SERVICE_INDEX(ZwWriteFile);
 
 	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
 	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
 
+	HookService(ZwWriteFile, false, false);
+	--cntHook;
 	int code = pShare -> Code;
 	NTSTATUS ret;
 	switch (code)
@@ -136,6 +156,7 @@ HookZwWriteFile(
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
+	//AfterWork(ZwWriteFile);
 	HookService(ZwWriteFile, true, false);
 	return ret;
 }
@@ -156,23 +177,25 @@ HookZwCreateFile (
 	IN ULONG EaLength
 )
 {
-	HookService(ZwCreateFile, false, false);
-	DbgPrint("Hit ZwCreateFile");
+	//PreWork(ZwCreateFile, "ZwCreateFile");
+	DbgPrint("Hit: %s", "ZwCreateFile");
+	++cntHook;
+	DbgPrint("Count: %d\n", cntHook);
 	pShare -> id = SERVICE_INDEX(ZwCreateFile);
-	DbgPrint("FileName: %wZ\n", ObjectAttributes -> ObjectName);
-	/*
-	if (ObjectAttributes -> ObjectName -> Length < STR_SIZE)
-	{
-		UNICODE_STRING tmp;
-		RtlInitEmptyUnicodeString(&tmp, pShare -> Str, STR_SIZE * sizeof(WCHAR));
-		RtlCopyUnicodeString(&tmp, ObjectAttributes -> ObjectName);
-		pShare -> Str[ObjectAttributes -> ObjectName -> Length] = '\0';
-	}
-	*/
+
+	PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
+	int length = pStr -> Length / sizeof(WCHAR);
+	DbgPrint("FileName: %wZ\n", pStr);
+	DbgPrint("Length: %d\n", length);
+	if (pStr -> Length < STR_SIZE)
+		RtlCopyMemory(pShare -> Str, pStr -> Buffer, pStr -> Length);
+	pShare -> Str[length] = 0;
 
 	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
 	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+	--cntHook;
 
+	HookService(ZwCreateFile, false, false);
 	int code = pShare -> Code;
 	NTSTATUS ret;
 	switch (code)
@@ -201,6 +224,7 @@ HookZwCreateFile (
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
+	//AfterWork(ZwCreateFile);
 	HookService(ZwCreateFile, true, false);
 	return ret;
 }
@@ -255,15 +279,15 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 
 void HookUnload(IN PDRIVER_OBJECT DriverObject)
 {
-	DbgPrint("Free Share Memory\n");
-	IoFreeMdl(pMdl);
-	ExFreePool(pShare);
-
 	if (hooking)
 	{
 		HookService(ZwWriteFile, false, true);
 		HookService(ZwCreateFile, false, true);
 	}
+
+	DbgPrint("Free Share Memory\n");
+	IoFreeMdl(pMdl);
+	ExFreePool(pShare);
 
 	UNICODE_STRING Win32Device;
 	RtlInitUnicodeString(&Win32Device,L"\\DosDevices\\Hook");
