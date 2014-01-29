@@ -91,20 +91,6 @@ void LoadAddress(void)
 	NewAddress[SERVICE_INDEX(ZwCreateFile)] = (ULONG)HookZwCreateFile;
 }
 
-void PreWork(PVOID func, PCHAR msg)
-{
-	HookService(func, false, false);
-	DbgPrint("Hit: %s", msg);
-	++cntHook;
-	DbgPrint("Count: %d\n", cntHook);
-	pShare -> id = SERVICE_INDEX(func);
-}
-
-void AfterWork(PVOID func)
-{
-	HookService(func, true, false);
-}
-
 NTSTATUS
 NTAPI
 HookZwWriteFile(
@@ -119,18 +105,28 @@ HookZwWriteFile(
 	IN PULONG Key OPTIONAL
 )
 {
-	//PreWork(ZwWriteFile, "ZwWriteFile");
+	HookService(ZwWriteFile, false, false);
 	DbgPrint("Hit: %s", "ZwWriteFile");
 	++cntHook;
 	DbgPrint("Count: %d\n", cntHook);
 	pShare -> id = SERVICE_INDEX(ZwWriteFile);
 
-	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
-	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
-
-	HookService(ZwWriteFile, false, false);
+	LARGE_INTEGER timeout;
+	timeout.QuadPart = TIMEOUT;
+	KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
+	NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
 	--cntHook;
-	int code = pShare -> Code;
+	int code;
+	bool rehook = true;
+	if (wait != STATUS_TIMEOUT)
+	{
+		code = pShare -> Code;
+	} else {
+		DbgPrint("Error wait for object. Unhook");
+		rehook = false;
+		code = CODE_ALLOW;
+	}
+
 	NTSTATUS ret;
 	switch (code)
 	{
@@ -156,8 +152,8 @@ HookZwWriteFile(
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	//AfterWork(ZwWriteFile);
-	HookService(ZwWriteFile, true, false);
+	if (rehook)
+		HookService(ZwWriteFile, true, false);
 	return ret;
 }
 
@@ -177,7 +173,7 @@ HookZwCreateFile (
 	IN ULONG EaLength
 )
 {
-	//PreWork(ZwCreateFile, "ZwCreateFile");
+	HookService(ZwCreateFile, false, false);
 	DbgPrint("Hit: %s", "ZwCreateFile");
 	++cntHook;
 	DbgPrint("Count: %d\n", cntHook);
@@ -190,13 +186,23 @@ HookZwCreateFile (
 	if (pStr -> Length < STR_SIZE)
 		RtlCopyMemory(pShare -> Str, pStr -> Buffer, pStr -> Length);
 	pShare -> Str[length] = 0;
-
-	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
-	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+	
+	LARGE_INTEGER timeout;
+	timeout.QuadPart = TIMEOUT;
+	KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
+	NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
 	--cntHook;
-
-	HookService(ZwCreateFile, false, false);
-	int code = pShare -> Code;
+	int code;
+	bool rehook = true;
+	if (wait != STATUS_TIMEOUT)
+	{
+		code = pShare -> Code;
+	} else {
+		DbgPrint("Error wait for object. Unhook");
+		rehook = false;
+		code = CODE_ALLOW;
+	}
+	
 	NTSTATUS ret;
 	switch (code)
 	{
@@ -224,8 +230,8 @@ HookZwCreateFile (
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	//AfterWork(ZwCreateFile);
-	HookService(ZwCreateFile, true, false);
+	if (rehook)
+		HookService(ZwCreateFile, true, false);
 	return ret;
 }
 
@@ -260,7 +266,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 	if (!DeviceObject)
 		return STATUS_UNEXPECTED_IO_ERROR;
 
-	pShare = (PSHARE)ExAllocatePool(NonPagedPool, sizeof(PSHARE));
+	pShare = (PSHARE)ExAllocatePool(NonPagedPool, sizeof(SHARE));
 	pMdl = IoAllocateMdl(pShare, sizeof(PSHARE), FALSE, FALSE, NULL);
 	MmBuildMdlForNonPagedPool(pMdl);
 	DbgPrint("Share Memory Address:0x%08X\n", (ULONG)pShare);
