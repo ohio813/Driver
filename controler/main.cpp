@@ -18,7 +18,7 @@ void hook(HANDLE hDevice)
 					0);
 	IO_PACKAGE package;
 	hEvent = package.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-	hCallBack = package.hCallBack = CreateEvent(NULL, FALSE, FALSE, NULL);
+	hCallBack = package.hCallBack = CreateEvent(NULL, TRUE, FALSE, NULL);
 	DeviceIoControl(hDevice,
 					HOOK_ON,
 					&package,
@@ -49,7 +49,7 @@ DWORD WINAPI work (LPVOID lpParam)
 		if (bExit)
 			return 0;
 		pShare -> Code = CODE_ALLOW;
-		SetEvent(hCallBack);
+		PulseEvent(hCallBack);
 		printf("Event hit: %d\n", pShare -> id);
 		if (pShare -> id == ID_ZwCreateFile)
 			printf("%S\n", pShare -> Str);

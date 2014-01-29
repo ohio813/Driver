@@ -7,8 +7,6 @@ static PSHARE pShare = NULL;
 static PMDL pMdl = NULL;
 static PKEVENT pEvent = NULL;
 static PKEVENT pCallBack = NULL;
-static int cntHook = 0;
-static bool bExit = false;
 
 void OpenProtection()
 {
@@ -107,24 +105,27 @@ HookZwWriteFile(
 {
 	HookService(ZwWriteFile, false, false);
 	DbgPrint("Hit: %s", "ZwWriteFile");
-	++cntHook;
-	DbgPrint("Count: %d\n", cntHook);
 	pShare -> id = SERVICE_INDEX(ZwWriteFile);
 
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
 	KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
-	NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
-	--cntHook;
+
 	int code;
-	bool rehook = true;
-	if (wait != STATUS_TIMEOUT)
+	while (true)
 	{
+		NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
+		int id = pShare -> id;
 		code = pShare -> Code;
-	} else {
-		DbgPrint("Error wait for object. Unhook");
-		rehook = false;
-		code = CODE_ALLOW;
+		if (wait == STATUS_TIMEOUT || !hooking)
+		{
+			DbgPrint("Timeout or exited. Allowed");
+			code = CODE_ALLOW;
+			break;
+		} else {
+			if (id == SERVICE_INDEX(ZwWriteFile))
+				break;
+		}
 	}
 
 	NTSTATUS ret;
@@ -152,7 +153,7 @@ HookZwWriteFile(
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	if (rehook)
+	if (hooking)
 		HookService(ZwWriteFile, true, false);
 	return ret;
 }
@@ -175,8 +176,6 @@ HookZwCreateFile (
 {
 	HookService(ZwCreateFile, false, false);
 	DbgPrint("Hit: %s", "ZwCreateFile");
-	++cntHook;
-	DbgPrint("Count: %d\n", cntHook);
 	pShare -> id = SERVICE_INDEX(ZwCreateFile);
 
 	PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
@@ -190,17 +189,22 @@ HookZwCreateFile (
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
 	KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
-	NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
-	--cntHook;
+
 	int code;
-	bool rehook = true;
-	if (wait != STATUS_TIMEOUT)
+	while (true)
 	{
+		NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
+		int id = pShare -> id;
 		code = pShare -> Code;
-	} else {
-		DbgPrint("Error wait for object. Unhook");
-		rehook = false;
-		code = CODE_ALLOW;
+		if (wait == STATUS_TIMEOUT || !hooking)
+		{
+			DbgPrint("Timeout or exited. Allowed");
+			code = CODE_ALLOW;
+			break;
+		} else {
+			if (id == SERVICE_INDEX(ZwCreateFile))
+				break;
+		}
 	}
 	
 	NTSTATUS ret;
@@ -230,7 +234,7 @@ HookZwCreateFile (
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	if (rehook)
+	if (hooking)
 		HookService(ZwCreateFile, true, false);
 	return ret;
 }
@@ -289,6 +293,12 @@ void HookUnload(IN PDRIVER_OBJECT DriverObject)
 	{
 		HookService(ZwWriteFile, false, true);
 		HookService(ZwCreateFile, false, true);
+		if (pCallBack)
+		{
+			KeSetEvent(pCallBack, IO_NO_INCREMENT, TRUE);
+			KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+		}
+		hooking = false;
 	}
 
 	DbgPrint("Free Share Memory\n");
@@ -370,6 +380,11 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 			HookService(ZwWriteFile, false, true);
 			HookService(ZwCreateFile, false, true);
 			hooking = false;
+			if (pCallBack)
+			{
+				KeSetEvent(pCallBack, IO_NO_INCREMENT, TRUE);
+				KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+			}
 		}
 		else
 			DbgPrint("Not Hooking\n");
