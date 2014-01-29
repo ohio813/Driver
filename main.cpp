@@ -105,15 +105,29 @@ HookZwWriteFile(
 {
 	HookService(ZwWriteFile, false, false);
 	DbgPrint("Hit: %s", "ZwWriteFile");
-	pShare -> id = SERVICE_INDEX(ZwWriteFile);
-
+	
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
-	KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
 
-	int code;
-	while (true)
+	bool bExit = false;
+
+	NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
+	if (wait == STATUS_TIMEOUT || !hooking)
+		bExit = true;
+
+	if (!bExit)
 	{
+		KeClearEvent(pCallBack);
+
+		pShare -> id = SERVICE_INDEX(ZwWriteFile);
+
+		KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
+	}
+
+	int code = CODE_ALLOW;
+	while (!bExit)
+	{
+
 		NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
 		int id = pShare -> id;
 		code = pShare -> Code;
@@ -176,22 +190,34 @@ HookZwCreateFile (
 {
 	HookService(ZwCreateFile, false, false);
 	DbgPrint("Hit: %s", "ZwCreateFile");
-	pShare -> id = SERVICE_INDEX(ZwCreateFile);
 
-	PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
-	int length = pStr -> Length / sizeof(WCHAR);
-	DbgPrint("FileName: %wZ\n", pStr);
-	DbgPrint("Length: %d\n", length);
-	if (pStr -> Length < STR_SIZE)
-		RtlCopyMemory(pShare -> Str, pStr -> Buffer, pStr -> Length);
-	pShare -> Str[length] = 0;
-	
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
-	KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
 
-	int code;
-	while (true)
+	bool bExit = false;
+
+	NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
+	if (wait == STATUS_TIMEOUT || !hooking)
+		bExit = true;
+
+	if (!bExit)
+	{
+		KeClearEvent(pCallBack);
+
+		pShare -> id = SERVICE_INDEX(ZwCreateFile);
+
+		PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
+		int length = pStr -> Length / sizeof(WCHAR);
+		DbgPrint("FileName: %wZ\n", pStr);
+		if (pStr -> Length < STR_SIZE)
+			RtlCopyMemory(pShare -> Str, pStr -> Buffer, pStr -> Length);
+		pShare -> Str[length] = 0;
+
+		KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
+	}
+
+	int code = CODE_ALLOW;
+	while (!bExit)
 	{
 		NTSTATUS wait = KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, &timeout);
 		int id = pShare -> id;
@@ -199,7 +225,6 @@ HookZwCreateFile (
 		if (wait == STATUS_TIMEOUT || !hooking)
 		{
 			DbgPrint("Timeout or exited. Allowed");
-			code = CODE_ALLOW;
 			break;
 		} else {
 			if (id == SERVICE_INDEX(ZwCreateFile))

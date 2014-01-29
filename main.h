@@ -14,7 +14,7 @@ extern "C"
 #define CODE_ALLOW				0xff
 #define CODE_DENY				0
 #define SERVICE_COUNT			400
-#define TIMEOUT					-100000000LL
+#define TIMEOUT					-10000000LL
 
 //Driver Functions
 extern "C" NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  RegistryPath);
