@@ -20,8 +20,6 @@ extern "C"
 
 #define DEBUG_LEVEL				1
 
-#define DbgPrint(LEVEL, S) if (DEBUG_LEVEL >= LEVEL) DbgPrint(S);
-
 //Driver Functions
 extern "C" NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  RegistryPath);
 void HookUnload(IN PDRIVER_OBJECT DriverObject);

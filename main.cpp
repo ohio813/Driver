@@ -75,11 +75,11 @@ void HookService(PVOID Service, bool hook, bool debug)
 	if (hook)
 	{
 		if (debug)
-			DbgPrint(0, "Hook on Service: %d", id);
+			DbgPrint("Hook on Service: %d", id);
 		OldAddress[id] = ModifyProcAddress(id, NewAddress[id]);
 	} else {
 		if (debug)
-			DbgPrint(0, "Hook off Service: %d", id);
+			DbgPrint("Hook off Service: %d", id);
 		ModifyProcAddress(id, OldAddress[id]);
 	}
 }
@@ -106,8 +106,6 @@ HookZwWriteFile(
 {
 	//Pre Work
 	int thisID = SERVICE_INDEX(ZwWriteFile);
-	DbgPrint(2, "Hit: %s ", "ZwWriteFile");
-	DbgPrint(2, "PID: %d\n", PsGetCurrentProcessId());
 
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
@@ -141,7 +139,6 @@ HookZwWriteFile(
 	switch (code)
 	{
 	case CODE_ALLOW:
-		DbgPrint(2, "Allowed\n");
 		ret = (*(pZwWriteFile)OldAddress[thisID])(
 			FileHandle,
 			Event,
@@ -155,11 +152,11 @@ HookZwWriteFile(
 			);
 		break;
 	case CODE_DENY:
-		DbgPrint(1, "Denied\n");
+		DbgPrint("Denied\n");
 		ret = STATUS_ACCESS_DENIED;
 		break;
 	default:
-		DbgPrint(0, "UNEXPECTED\n");
+		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
 	return ret;
@@ -182,8 +179,6 @@ HookZwCreateFile (
 )
 {
 	int thisID = SERVICE_INDEX(ZwCreateFile);
-	DbgPrint(2, "Hit: %s ", "ZwCreateFile");
-	DbgPrint(2, "PID: %d\n", PsGetCurrentProcessId());
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
 	
@@ -204,7 +199,6 @@ HookZwCreateFile (
 			pShareBase -> id = thisID;
 			PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
 			int length = pStr -> Length / sizeof(WCHAR);
-			DbgPrint(2, "FileName: %wZ\n", pStr);
 			if (pStr -> Length < STR_SIZE)
 				RtlCopyMemory(pShareBase -> Str, pStr -> Buffer, pStr -> Length);
 			pShareBase -> Str[length] = 0;
@@ -222,7 +216,6 @@ HookZwCreateFile (
 	switch (code)
 	{
 	case CODE_ALLOW:
-		DbgPrint(2, "Allowed\n");
 		ret = (*(pZwCreateFile)OldAddress[thisID])(
 			FileHandle,
 			DesiredAccess,
@@ -238,11 +231,11 @@ HookZwCreateFile (
 			);
 		break;
 	case CODE_DENY:
-		DbgPrint(1, "Denied\n");
+		DbgPrint("Denied\n");
 		ret = STATUS_ACCESS_DENIED;
 		break;
 	default:
-		DbgPrint(0, "UNEXPECTED\n");
+		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
 	return ret;
@@ -288,7 +281,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 	pShare = (PSHARE)ExAllocatePool(NonPagedPool, sizeof(SHARE) * SHARE_COUNT);
 	pMdl = IoAllocateMdl(pShare, sizeof(SHARE) * SHARE_COUNT, FALSE, FALSE, NULL);
 	MmBuildMdlForNonPagedPool(pMdl);
-	DbgPrint(0, "Share Memory Address:0x%08X\n", (ULONG)pShare);
+	DbgPrint("Share Memory Address:0x%08X\n", (ULONG)pShare);
 	for (int i = 0; i < SHARE_COUNT; ++i)
 		pShare[i].Code = CODE_ALLOW;
 
@@ -324,7 +317,7 @@ void HookUnload(IN PDRIVER_OBJECT DriverObject)
 	}
 	ExFreePool(pMutex);
 
-	DbgPrint(0, "Free Share Memory\n");
+	DbgPrint("Free Share Memory\n");
 	IoFreeMdl(pMdl);
 	ExFreePool(pShare);
 
@@ -352,7 +345,7 @@ NTSTATUS HookDefaultHandler(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
-	DbgPrint(0, "Device Control Detected\n");
+	DbgPrint("Device Control Detected\n");
 	Irp->IoStatus.Status = STATUS_SUCCESS;
 	Irp->IoStatus.Information = 0;
 	PIO_STACK_LOCATION IrpStack = IoGetCurrentIrpStackLocation(Irp);
@@ -362,13 +355,13 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	{
 		if (hooking)
 		{
-			DbgPrint(0, "Already Hooking!\n");
+			DbgPrint("Already Hooking!\n");
 		} else {
 			PIO_PACKAGE pBuffer = (PIO_PACKAGE)Irp->AssociatedIrp.SystemBuffer;
 			ULONG size = IrpStack->Parameters.DeviceIoControl.InputBufferLength; 
 			if (pBuffer == NULL || size < sizeof(IO_PACKAGE))
 			{
-				DbgPrint(0, "Buffer Error\n");
+				DbgPrint("Buffer Error\n");
 				Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
 				break;
 			}
@@ -392,7 +385,7 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 			}
 			if (failed)
 			{
-				DbgPrint(0, "Reference Error\n");
+				DbgPrint("Reference Error\n");
 				Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
 				break;
 			}
@@ -413,7 +406,7 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				KeSetEvent(pCallback[i], IO_NO_INCREMENT, FALSE);
 		}
 		else
-			DbgPrint(0, "Not Hooking\n");
+			DbgPrint("Not Hooking\n");
 		break;
 	}
 	case GET_ADD:
@@ -422,17 +415,17 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 		ULONG size = IrpStack->Parameters.DeviceIoControl.OutputBufferLength;
 		if (pBuffer == NULL || size < sizeof(PSHARE))
 		{
-			DbgPrint(0, "Buffer Error\n");
+			DbgPrint("Buffer Error\n");
 			Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
 			break;
 		}
 		PVOID UserAdd = MmMapLockedPages(pMdl, UserMode);
 		*pBuffer = UserAdd;
-		DbgPrint(0, "UserMode Address:0x%08X\n", UserAdd);
+		DbgPrint("UserMode Address:0x%08X\n", UserAdd);
 		break;
 	}
 	default:
-		DbgPrint(0, "Unknown Control\n");
+		DbgPrint("Unknown Control\n");
 		Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
 	}
 	NTSTATUS ret = Irp->IoStatus.Status;
