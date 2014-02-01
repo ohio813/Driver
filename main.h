@@ -14,7 +14,7 @@ extern "C"
 #define CODE_ALLOW				0xff
 #define CODE_DENY				0
 #define SERVICE_COUNT			400
-#define TIMEOUT					-10000000LL
+#define TIMEOUT					-1000000LL
 
 //Driver Functions
 extern "C" NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  RegistryPath);
@@ -31,6 +31,32 @@ ULONG GetProcAddress(ULONG ServiceID);
 ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress);
 void HookService(PVOID, bool, bool);
 void LoadAddress(void);
+
+typedef NTSTATUS (* NTAPI pZwWriteFile)(
+	IN HANDLE FileHandle,
+	IN HANDLE Event OPTIONAL,
+	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
+	IN PVOID ApcContext OPTIONAL,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PVOID Buffer,
+	IN ULONG Length,
+	IN PLARGE_INTEGER ByteOffset OPTIONAL,
+	IN PULONG Key OPTIONAL
+);
+
+typedef NTSTATUS (* NTAPI pZwCreateFile)(
+	OUT PHANDLE FileHandle,
+	IN ACCESS_MASK DesiredAccess,
+	IN POBJECT_ATTRIBUTES ObjectAttributes,
+	OUT PIO_STATUS_BLOCK IoStatusBlock,
+	IN PLARGE_INTEGER AllocationSize OPTIONAL,
+	IN ULONG FileAttributes,
+	IN ULONG ShareAccess,
+	IN ULONG CreateDisposition,
+	IN ULONG CreateOptions,
+	IN PVOID EaBuffer OPTIONAL,
+	IN ULONG EaLength
+);
 
 NTSTATUS
 NTAPI

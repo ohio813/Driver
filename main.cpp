@@ -103,8 +103,10 @@ HookZwWriteFile(
 	IN PULONG Key OPTIONAL
 )
 {
-	HookService(ZwWriteFile, false, false);
-	DbgPrint("Hit: %s", "ZwWriteFile");
+	//HookService(ZwWriteFile, false, false);
+	int thisID = SERVICE_INDEX(ZwWriteFile);
+	DbgPrint("Hit: %s ", "ZwWriteFile");
+	DbgPrint("PID: %d\n", PsGetCurrentProcessId());
 	
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
@@ -119,7 +121,7 @@ HookZwWriteFile(
 	{
 		KeClearEvent(pCallBack);
 
-		pShare -> id = SERVICE_INDEX(ZwWriteFile);
+		pShare -> id = thisID;
 
 		KeSetEvent(pEvent, IO_NO_INCREMENT, TRUE);
 	}
@@ -137,7 +139,7 @@ HookZwWriteFile(
 			code = CODE_ALLOW;
 			break;
 		} else {
-			if (id == SERVICE_INDEX(ZwWriteFile))
+			if (id == thisID)
 				break;
 		}
 	}
@@ -147,7 +149,7 @@ HookZwWriteFile(
 	{
 	case CODE_ALLOW:
 		DbgPrint("Allowed\n");
-		ret = ZwWriteFile(
+		ret = (*(pZwWriteFile)OldAddress[thisID])(
 			FileHandle,
 			Event,
 			ApcRoutine,
@@ -167,8 +169,8 @@ HookZwWriteFile(
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	if (hooking)
-		HookService(ZwWriteFile, true, false);
+	//if (hooking)
+		//HookService(ZwWriteFile, true, false);
 	return ret;
 }
 
@@ -188,8 +190,10 @@ HookZwCreateFile (
 	IN ULONG EaLength
 )
 {
-	HookService(ZwCreateFile, false, false);
-	DbgPrint("Hit: %s", "ZwCreateFile");
+	//HookService(ZwCreateFile, false, false);
+	int thisID = SERVICE_INDEX(ZwCreateFile);
+	DbgPrint("Hit: %s ", "ZwCreateFile");
+	DbgPrint("PID: %d\n", PsGetCurrentProcessId());
 
 	LARGE_INTEGER timeout;
 	timeout.QuadPart = TIMEOUT;
@@ -204,7 +208,7 @@ HookZwCreateFile (
 	{
 		KeClearEvent(pCallBack);
 
-		pShare -> id = SERVICE_INDEX(ZwCreateFile);
+		pShare -> id = thisID;
 
 		PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
 		int length = pStr -> Length / sizeof(WCHAR);
@@ -227,7 +231,7 @@ HookZwCreateFile (
 			DbgPrint("Timeout or exited. Allowed");
 			break;
 		} else {
-			if (id == SERVICE_INDEX(ZwCreateFile))
+			if (id == thisID)
 				break;
 		}
 	}
@@ -237,7 +241,7 @@ HookZwCreateFile (
 	{
 	case CODE_ALLOW:
 		DbgPrint("Allowed\n");
-		ret = ZwCreateFile(
+		ret = (*(pZwCreateFile)OldAddress[thisID])(
 			FileHandle,
 			DesiredAccess,
 			ObjectAttributes,
@@ -259,8 +263,8 @@ HookZwCreateFile (
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	if (hooking)
-		HookService(ZwCreateFile, true, false);
+	//if (hooking)
+		//HookService(ZwCreateFile, true, false);
 	return ret;
 }
 
