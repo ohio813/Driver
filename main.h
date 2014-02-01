@@ -16,6 +16,12 @@ extern "C"
 #define SERVICE_COUNT			400
 #define TIMEOUT					-1000000LL
 
+#define SHARE_COUNT				10
+
+#define DEBUG_LEVEL				1
+
+#define DbgPrint(LEVEL, S) if (DEBUG_LEVEL >= LEVEL) DbgPrint(S);
+
 //Driver Functions
 extern "C" NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  RegistryPath);
 void HookUnload(IN PDRIVER_OBJECT DriverObject);
@@ -110,6 +116,6 @@ typedef struct _SHARE
 //IO
 typedef struct _IO_PACKAGE
 {
-	HANDLE hEvent;
-	HANDLE hCallBack;
+	HANDLE hEvent[SHARE_COUNT];
+	HANDLE hCallback[SHARE_COUNT];
 }IO_PACKAGE, *PIO_PACKAGE;
