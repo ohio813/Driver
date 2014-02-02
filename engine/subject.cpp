@@ -54,7 +54,7 @@ bool subject_store(DWORD parent, DWORD pid, LPCTSTR file)
 	return ret;
 }
 
-DWORD subject_compare(DWORD subject1, DWORD subject2)
+double subject_compare(DWORD subject1, DWORD subject2)
 {
 	DWORD sum1 = 0;
 	DWORD sum2 = 0;
@@ -64,4 +64,24 @@ DWORD subject_compare(DWORD subject1, DWORD subject2)
 		sum1 += i -> second;
 	for (LOG_iter i = log2 -> begin(); i != log2 -> end(); ++i)
 		sum2 += i -> second;
+	double ret = .0;
+	for (LOG_iter i = log1 -> begin(); i != log1 -> end(); ++i)
+	{
+		LOG_iter j = log2 -> find(i -> first);
+		double k1 = (i -> second + .0) / (sum1 + .0);
+		double k2 = .0;
+		if (j != log2 -> end())
+			k2 = (j -> second + .0) / (sum1 + .0);
+		ret += (k1 - k2) * (k1 - k2);
+	}
+	for (LOG_iter i = log2 -> begin(); i != log2 -> end(); ++i)
+	{
+		LOG_iter j = log1 -> find(i -> first);
+		double k1 = (i -> second + .0) / (sum1 + .0);
+		double k2 = .0;
+		if (j != log1 -> end())
+			k2 = (j -> second + .0) / (sum1 + .0);
+		ret += (k1 - k2) * (k1 - k2);
+	}
+	return ret;
 }

@@ -13,7 +13,7 @@
 typedef struct _hash
 {
 	unsigned char data[HASH_LEN];
-	friend bool operator <(_hash a, _hash b)
+	inline friend bool operator <(_hash a, _hash b)
 	{
 		for (int i = 0; i < HASH_LEN; ++i)
 			if (a.data[i] < b.data[i])
@@ -41,7 +41,6 @@ typedef struct _buffer
 }BUFFER, *PBUFFER;
 
 #define DATA_FILE	"\\lc.lc"
-#define LOG_FILE	"\\lc.log"
 
 extern "C" {
 	LPCTSTR db_get_path(LPCTSTR, LPCTSTR);
