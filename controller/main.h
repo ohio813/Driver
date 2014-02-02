@@ -9,7 +9,8 @@
 #define GET_ADD					CTL_CODE(FILE_DEVICE_UNKNOWN,HOOK_INDEX + 2,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define CODE_ALLOW				0xff
 #define CODE_DENY				0
-#define THREADS					10
+#define SHARE_COUNT				10
+#define THREADS					SHARE_COUNT
 
 #define ID_ZwWriteFile			274
 #define ID_ZwCreateFile			37
@@ -26,6 +27,6 @@ typedef struct _SHARE
 //IO
 typedef struct _IO_PACKAGE
 {
-	HANDLE hEvent;
-	HANDLE hCallBack;
+	HANDLE hEvent[SHARE_COUNT];
+	HANDLE hCallback[SHARE_COUNT];
 }IO_PACKAGE, *PIO_PACKAGE;

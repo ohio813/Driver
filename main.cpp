@@ -5,8 +5,9 @@ static ULONG NewAddress[SERVICE_COUNT];
 static bool hooking = false;
 static PSHARE pShare = NULL;
 static PMDL pMdl = NULL;
-static PKEVENT pEvent = NULL;
-static PKEVENT pCallBack = NULL;
+static PKEVENT pEvent[SHARE_COUNT];
+static PKEVENT pCallback[SHARE_COUNT];
+static PKMUTEX pMutex[SHARE_COUNT];
 
 void OpenProtection()
 {
@@ -103,20 +104,42 @@ HookZwWriteFile(
 	IN PULONG Key OPTIONAL
 )
 {
-	HookService(ZwWriteFile, false, false);
-	DbgPrint("Hit ZwWriteFile");
-	pShare -> id = SERVICE_INDEX(ZwWriteFile);
+	//Pre Work
+	int thisID = SERVICE_INDEX(ZwWriteFile);
 
-	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
-	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
+	LARGE_INTEGER timeout;
+	timeout.QuadPart = TIMEOUT;
 
-	int code = pShare -> Code;
+	//Wait For Mutex
+	PVOID pBuffer = ExAllocatePool(NonPagedPool, sizeof(KWAIT_BLOCK) * SHARE_COUNT);
+	NTSTATUS wait = KeWaitForMultipleObjects(SHARE_COUNT, (PVOID*) pMutex, WaitAny, Executive, KernelMode, FALSE, &timeout,(PKWAIT_BLOCK) pBuffer);
+	ExFreePool(pBuffer);
+
+	//Push The Message & Wait For Callback
+	int code = CODE_ALLOW;
+	if (NT_SUCCESS(wait))
+	{
+		ULONG ShareID = (ULONG) wait - (ULONG) STATUS_WAIT_0;
+		if (hooking)
+		{
+			PSHARE pShareBase = pShare + ShareID;
+
+			pShareBase -> id = thisID;
+
+			KeSetEvent(pEvent[ShareID], IO_NO_INCREMENT, TRUE);
+			wait = KeWaitForSingleObject(pCallback[ShareID], Executive, KernelMode, FALSE, &timeout);
+
+			if (NT_SUCCESS(wait))
+				code = pShareBase -> Code;
+		}
+		KeReleaseMutex(pMutex[ShareID], FALSE);
+	}
+
 	NTSTATUS ret;
 	switch (code)
 	{
 	case CODE_ALLOW:
-		DbgPrint("Allowed\n");
-		ret = ZwWriteFile(
+		ret = (*(pZwWriteFile)OldAddress[thisID])(
 			FileHandle,
 			Event,
 			ApcRoutine,
@@ -136,7 +159,6 @@ HookZwWriteFile(
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	HookService(ZwWriteFile, true, false);
 	return ret;
 }
 
@@ -156,30 +178,45 @@ HookZwCreateFile (
 	IN ULONG EaLength
 )
 {
-	HookService(ZwCreateFile, false, false);
-	DbgPrint("Hit ZwCreateFile");
-	pShare -> id = SERVICE_INDEX(ZwCreateFile);
-	DbgPrint("FileName: %wZ\n", ObjectAttributes -> ObjectName);
-	/*
-	if (ObjectAttributes -> ObjectName -> Length < STR_SIZE)
+	int thisID = SERVICE_INDEX(ZwCreateFile);
+	LARGE_INTEGER timeout;
+	timeout.QuadPart = TIMEOUT;
+	
+	//Wait For Mutex
+	PVOID pBuffer = ExAllocatePool(NonPagedPool, sizeof(KWAIT_BLOCK) * SHARE_COUNT);
+	NTSTATUS wait = KeWaitForMultipleObjects(SHARE_COUNT, (PVOID *)pMutex, WaitAny, Executive, KernelMode, FALSE, &timeout,(PKWAIT_BLOCK) pBuffer);
+	ExFreePool(pBuffer);
+
+	//Push The Message & Wait For Callback
+	int code = CODE_ALLOW;
+	if (NT_SUCCESS(wait))
 	{
-		UNICODE_STRING tmp;
-		RtlInitEmptyUnicodeString(&tmp, pShare -> Str, STR_SIZE * sizeof(WCHAR));
-		RtlCopyUnicodeString(&tmp, ObjectAttributes -> ObjectName);
-		pShare -> Str[ObjectAttributes -> ObjectName -> Length] = '\0';
+		ULONG ShareID = (ULONG) wait - (ULONG) STATUS_WAIT_0;
+		if (hooking)
+		{
+			PSHARE pShareBase = pShare + ShareID;
+
+			pShareBase -> id = thisID;
+			PUNICODE_STRING pStr = ObjectAttributes -> ObjectName;
+			int length = pStr -> Length / sizeof(WCHAR);
+			if (pStr -> Length < STR_SIZE)
+				RtlCopyMemory(pShareBase -> Str, pStr -> Buffer, pStr -> Length);
+			pShareBase -> Str[length] = 0;
+
+			KeSetEvent(pEvent[ShareID], IO_NO_INCREMENT, TRUE);
+			wait = KeWaitForSingleObject(pCallback[ShareID], Executive, KernelMode, FALSE, &timeout);
+
+			if (NT_SUCCESS(wait))
+				code = pShareBase -> Code;
+		}
+		KeReleaseMutex(pMutex[ShareID], FALSE);
 	}
-	*/
 
-	KeSetEvent(pEvent, IO_NO_INCREMENT, FALSE);
-	KeWaitForSingleObject(pCallBack, Executive, UserMode, FALSE, NULL);
-
-	int code = pShare -> Code;
 	NTSTATUS ret;
 	switch (code)
 	{
 	case CODE_ALLOW:
-		DbgPrint("Allowed\n");
-		ret = ZwCreateFile(
+		ret = (*(pZwCreateFile)OldAddress[thisID])(
 			FileHandle,
 			DesiredAccess,
 			ObjectAttributes,
@@ -201,7 +238,6 @@ HookZwCreateFile (
 		DbgPrint("UNEXPECTED\n");
 		ret = STATUS_UNEXPECTED_IO_ERROR;
 	}
-	HookService(ZwCreateFile, true, false);
 	return ret;
 }
 
@@ -236,11 +272,18 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 	if (!DeviceObject)
 		return STATUS_UNEXPECTED_IO_ERROR;
 
-	pShare = (PSHARE)ExAllocatePool(NonPagedPool, sizeof(PSHARE));
-	pMdl = IoAllocateMdl(pShare, sizeof(PSHARE), FALSE, FALSE, NULL);
+	//Init
+	for (int i = 0; i < SHARE_COUNT; ++i)
+	{
+		pMutex[i] = (PKMUTEX)ExAllocatePool(NonPagedPool, sizeof(KMUTEX));
+		KeInitializeMutex(pMutex[i], 0);
+	}
+	pShare = (PSHARE)ExAllocatePool(NonPagedPool, sizeof(SHARE) * SHARE_COUNT);
+	pMdl = IoAllocateMdl(pShare, sizeof(SHARE) * SHARE_COUNT, FALSE, FALSE, NULL);
 	MmBuildMdlForNonPagedPool(pMdl);
 	DbgPrint("Share Memory Address:0x%08X\n", (ULONG)pShare);
-	pShare -> Code = CODE_ALLOW;
+	for (int i = 0; i < SHARE_COUNT; ++i)
+		pShare[i].Code = CODE_ALLOW;
 
 	DeviceObject->Flags |= DO_DIRECT_IO;
 	DeviceObject->AlignmentRequirement = FILE_WORD_ALIGNMENT;
@@ -255,15 +298,28 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING  Registr
 
 void HookUnload(IN PDRIVER_OBJECT DriverObject)
 {
-	DbgPrint("Free Share Memory\n");
-	IoFreeMdl(pMdl);
-	ExFreePool(pShare);
-
 	if (hooking)
 	{
 		HookService(ZwWriteFile, false, true);
 		HookService(ZwCreateFile, false, true);
+		hooking = false;
+		for (int i = 0; i < SHARE_COUNT; ++i)
+			KeSetEvent(pCallback[i], IO_NO_INCREMENT, FALSE);
 	}
+
+	for (int i = 0; i < SHARE_COUNT; ++i)
+	{
+		ObDereferenceObject(pMutex[i]);
+		if (pEvent[i])
+			ObDereferenceObject(pEvent[i]);
+		if (pCallback[i])
+			ObDereferenceObject(pCallback[i]);
+	}
+	ExFreePool(pMutex);
+
+	DbgPrint("Free Share Memory\n");
+	IoFreeMdl(pMdl);
+	ExFreePool(pShare);
 
 	UNICODE_STRING Win32Device;
 	RtlInitUnicodeString(&Win32Device,L"\\DosDevices\\Hook");
@@ -298,9 +354,9 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	case HOOK_ON:
 	{
 		if (hooking)
-			DbgPrint("Already Hooking!\n");
-		else
 		{
+			DbgPrint("Already Hooking!\n");
+		} else {
 			PIO_PACKAGE pBuffer = (PIO_PACKAGE)Irp->AssociatedIrp.SystemBuffer;
 			ULONG size = IrpStack->Parameters.DeviceIoControl.InputBufferLength; 
 			if (pBuffer == NULL || size < sizeof(IO_PACKAGE))
@@ -309,19 +365,25 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
 				break;
 			}
-			NTSTATUS status1 = ObReferenceObjectByHandle(pBuffer->hEvent,
-        												SYNCHRONIZE,
-        												*ExEventObjectType,
-        												KernelMode,
-         												(PVOID *)&pEvent,
-         												NULL);
-			NTSTATUS status2 = ObReferenceObjectByHandle(pBuffer->hCallBack,
-        												SYNCHRONIZE,
-        												*ExEventObjectType,
-        												KernelMode,
-         												(PVOID *)&pCallBack,
-         												NULL);
-			if (!NT_SUCCESS(status1) || ! NT_SUCCESS(status2))
+			bool failed = false;
+			for (int i = 0; i < SHARE_COUNT; ++i)
+			{
+				NTSTATUS status1 = ObReferenceObjectByHandle(pBuffer->hEvent[i],
+															SYNCHRONIZE,
+															*ExEventObjectType,
+															KernelMode,
+															(PVOID *)&pEvent[i],
+															NULL);
+				NTSTATUS status2 = ObReferenceObjectByHandle(pBuffer->hCallback[i],
+															SYNCHRONIZE,
+															*ExEventObjectType,
+															KernelMode,
+															(PVOID *)&pCallback[i],
+															NULL);
+				if (!NT_SUCCESS(status1) || ! NT_SUCCESS(status2))
+					failed = true;
+			}
+			if (failed)
 			{
 				DbgPrint("Reference Error\n");
 				Irp->IoStatus.Status = STATUS_UNEXPECTED_IO_ERROR;
@@ -340,6 +402,8 @@ NTSTATUS HookIoControl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 			HookService(ZwWriteFile, false, true);
 			HookService(ZwCreateFile, false, true);
 			hooking = false;
+			for (int i = 0; i < SHARE_COUNT; ++i)
+				KeSetEvent(pCallback[i], IO_NO_INCREMENT, FALSE);
 		}
 		else
 			DbgPrint("Not Hooking\n");
