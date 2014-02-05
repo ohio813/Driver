@@ -36,7 +36,7 @@ ULONG ModifyProcAddress(ULONG ServiceID, ULONG NewAddress);
 void HookService(PVOID, bool, bool);
 void LoadAddress(void);
 
-typedef NTSTATUS (* NTAPI pZwWriteFile)(
+typedef NTSTATUS (* pZwWriteFile)(
 	IN HANDLE FileHandle,
 	IN HANDLE Event OPTIONAL,
 	IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
@@ -48,7 +48,7 @@ typedef NTSTATUS (* NTAPI pZwWriteFile)(
 	IN PULONG Key OPTIONAL
 );
 
-typedef NTSTATUS (* NTAPI pZwCreateFile)(
+typedef NTSTATUS (* pZwCreateFile)(
 	OUT PHANDLE FileHandle,
 	IN ACCESS_MASK DesiredAccess,
 	IN POBJECT_ATTRIBUTES ObjectAttributes,

@@ -1,6 +1,6 @@
 *bin*
 *.exe
-objfre*
+obj*
 *.log
 *.wrn
 *.sublime*
