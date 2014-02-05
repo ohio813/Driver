@@ -309,13 +309,12 @@ void HookUnload(IN PDRIVER_OBJECT DriverObject)
 
 	for (int i = 0; i < SHARE_COUNT; ++i)
 	{
-		ObDereferenceObject(pMutex[i]);
+		ExFreePool(pMutex[i]);
 		if (pEvent[i])
 			ObDereferenceObject(pEvent[i]);
 		if (pCallback[i])
 			ObDereferenceObject(pCallback[i]);
 	}
-	ExFreePool(pMutex);
 
 	DbgPrint("Free Share Memory\n");
 	IoFreeMdl(pMdl);
